@@ -693,7 +693,7 @@ function renderWithdraw() {
                 <td class="col-actions">
                   <button class="btn-link" onclick="openWithdrawApprove('${w.id}')">通过</button>
                   <span class="divider">|</span>
-                  <button class="btn-link danger" onclick="showToast('已驳回提现申请 ${w.id}')">驳回</button>
+                  <button class="btn-link danger" onclick="rejectWithdraw('${w.id}')">驳回</button>
                 </td>
               </tr>
             `).join('')}

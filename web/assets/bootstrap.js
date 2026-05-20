@@ -125,6 +125,7 @@ async function loadLiveData() {
     ['dyStl', '/api/platform/settlements?platform=douyin', idFn, v => v.list],
     ['dyCfg', '/api/platform/store-configs?platform=douyin', idFn, v => v.list],
     ['mp', '/api/system/mini-programs', idFn, v => v.list],
+    ['withdraws', '/api/withdraws', idFn, v => v.list],
     ['overview', '/api/statistics/overview', idFn, v => v],
   ];
   const results = await Promise.allSettled(tasks.map(t => YFSC.get(t[1])));
@@ -154,8 +155,43 @@ async function loadLiveData() {
   if (got.dyStl) { DOUYIN_SETTLEMENTS = got.dyStl; }
   if (got.dyCfg) { DOUYIN_STORE_CONFIGS = got.dyCfg; }
   if (got.mp) { MINI_PROGRAMS = got.mp; }
+  if (got.withdraws) { applyWithdraws(got.withdraws); }
   if (got.overview) { window.LIVE.overview = got.overview; }
   window.LIVE.loaded = true;
+}
+
+// 提现: 中文状态 -> 原型英文状态, 并按待审核/历史拆分
+const WD_STATUS = { '待审核': 'pending', '已支付': 'paid', '已通过': 'paid', '已驳回': 'rejected' };
+function applyWithdraws(list) {
+  const mapped = list.map(w => ({
+    id: w.id, shop: w.shop, shopPark: w.shopPark, amount: num(w.amount),
+    bankName: w.bankName, bankAccount: w.bankAccount, bankHolder: w.bankHolder,
+    status: WD_STATUS[w.status] || 'pending', applyAt: w.applyAt,
+    reconciliationId: w.reconciliationId || '', reviewer: w.reviewer || '',
+    reviewedAt: w.reviewedAt || '', paidAt: w.paidAt || '',
+  }));
+  WITHDRAW_APPLICATIONS = mapped.filter(w => w.status === 'pending');
+  WITHDRAW_HISTORY = mapped.filter(w => w.status !== 'pending');
+}
+
+// 真实提现审核 (覆盖原型本地实现)
+async function approveWithdraw(id) {
+  try {
+    await YFSC.post('/api/withdraws/' + id + '/approve', { remark: '审核通过' });
+    const w = await YFSC.get('/api/withdraws');
+    applyWithdraws(w.list);
+    showToast('✅ 提现已通过 · 对账单已生成 · 已通知商户 ' + id);
+    if (typeof renderPCContent === 'function') renderPCContent('withdraw');
+  } catch (e) { showToast('操作失败：' + e.message); }
+}
+async function rejectWithdraw(id) {
+  try {
+    await YFSC.post('/api/withdraws/' + id + '/reject', { remark: '审核驳回' });
+    const w = await YFSC.get('/api/withdraws');
+    applyWithdraws(w.list);
+    showToast('已驳回提现申请 ' + id);
+    if (typeof renderPCContent === 'function') renderPCContent('withdraw');
+  } catch (e) { showToast('操作失败：' + e.message); }
 }
 
 // ---- 视角切换时按角色重新登录拉取作用域数据 ----

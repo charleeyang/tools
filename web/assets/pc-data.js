@@ -377,12 +377,12 @@ const PARK_FINANCE = {
 };
 
 // 提现申请 · 增强数据 (含银行信息、流程状态)
-const WITHDRAW_APPLICATIONS = [
+var WITHDRAW_APPLICATIONS = [
   { id:'TX26051415070', shop:'火车餐厅', shopPark:'黄梅袁夫稻田', amount:1200.00, bankName:'招商银行', bankAccount:'6214****6908', bankHolder:'黄轩辉', status:'pending', applyAt:'2026-05-14 15:07', reconciliationId:'' },
   { id:'TX26051310220', shop:'树下咖啡', shopPark:'黄梅袁夫稻田', amount:800.00, bankName:'建设银行', bankAccount:'6217****3320', bankHolder:'孙七', status:'pending', applyAt:'2026-05-13 10:22', reconciliationId:'' },
 ];
 
-const WITHDRAW_HISTORY = [
+var WITHDRAW_HISTORY = [
   { id:'TX26051209150', shop:'火车餐厅', shopPark:'黄梅袁夫稻田', amount:2400.00, bankName:'招商银行', bankAccount:'6214****6908', bankHolder:'黄轩辉', status:'paid', reconciliationId:'DZ20260512-FCCT', reviewer:'李四', reviewedAt:'2026-05-12 09:30', paidAt:'2026-05-12 09:35' },
   { id:'TX26050816220', shop:'树下咖啡', shopPark:'黄梅袁夫稻田', amount:1500.00, bankName:'建设银行', bankAccount:'6217****3320', bankHolder:'孙七', status:'paid', reconciliationId:'DZ20260508-SXKF', reviewer:'李四', reviewedAt:'2026-05-08 16:42', paidAt:'2026-05-08 16:50' },
   { id:'TX26050714050', shop:'稻田手作坊', shopPark:'黄梅袁夫稻田', amount:320.00, bankName:'农业银行', bankAccount:'6228****1190', bankHolder:'赵六', status:'rejected', reconciliationId:'', reviewer:'李四', reviewedAt:'2026-05-07 14:30', paidAt:'-' },

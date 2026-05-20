@@ -1,0 +1,18 @@
+# 数据库 / 运行时
+*.db
+*.db-wal
+*.db-shm
+server/yfsc.db*
+
+# 构建产物
+/bin/
+yfsc-server
+server/server
+*.exe
+
+# 依赖 / 缓存
+node_modules/
+.DS_Store
+
+# 日志
+*.log

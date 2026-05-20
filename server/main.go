@@ -19,8 +19,10 @@ func main() {
 	registerAPI(mux)
 
 	// 静态前端 (原型: PC后台 + 三端小程序)
-	resolved := resolveWebDir(*webDir)
-	if resolved != "" {
+	if efs := embeddedFS(); efs != nil {
+		mux.Handle("/", http.FileServer(http.FS(efs)))
+		log.Printf("静态前端: 内嵌资源 (自包含单文件)")
+	} else if resolved := resolveWebDir(*webDir); resolved != "" {
 		mux.Handle("/", http.FileServer(http.Dir(resolved)))
 		log.Printf("静态前端目录: %s", resolved)
 	} else {

@@ -6,6 +6,8 @@ server/yfsc.db*
 
 # 构建产物
 /bin/
+/dist/
+server/webembed/
 yfsc-server
 server/server
 *.exe

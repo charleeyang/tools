@@ -39,7 +39,16 @@ make build && ./bin/yfsc-server -web web
 
 # 方式四：Docker
 docker build -t yfsc . && docker run -p 8080:8080 -v yfsc-data:/app/data yfsc
+
+# 方式五：发布版自包含单文件（前端已内嵌，无需 Go/Node/web 目录）
+make release            # 生成 dist/ 下各平台单文件
+./dist/yfsc-server-linux-amd64          # Linux
+./dist/yfsc-server-macos-arm64          # macOS (Apple Silicon)
+# Windows: 双击 dist\yfsc-server-windows-amd64.exe
 ```
+
+> 发布版为单个可执行文件，内置前端与 SQLite，运行后浏览器打开
+> `http://localhost:8080` 即可。首次运行在同目录生成 `yfsc.db`。
 
 打开 `http://localhost:8080`，使用下方账号登录。首次启动会自动建表并写入种子数据
 （`yfsc.db`）。删除该文件即可重置（`make fresh`）。

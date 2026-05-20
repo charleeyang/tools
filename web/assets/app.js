@@ -159,6 +159,7 @@ function renderPCContent(page) {
     'park-list':        renderParkList,
     'park-add':         renderParkAdd,
     'shop-list':        renderShopList,
+    'product-list':     renderProductList,
     'shop-stats':       renderShopStats,
     'shop-types':       renderShopTypes,
     'user-list':        renderUserList,

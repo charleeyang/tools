@@ -138,6 +138,21 @@ NAID=$(curl -s -X POST "$BASE/api/activities" -H "Authorization: Bearer $ADMIN" 
 chk "更新活动" "0" "$(curl -s -X PUT "$BASE/api/activities/$NAID" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"title":"改名活动"}' | jqv "['code']")"
 chk "删除活动" "0" "$(curl -s -X DELETE "$BASE/api/activities/$NAID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
 
+echo "==== 12. 商品管理 CRUD ===="
+chk "商品列表(平台)" "0" "$(code "$ADMIN" "/api/products")"
+PRID=$(curl -s -X POST "$BASE/api/products" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"name":"测试商品","shopId":1,"price":58,"originalPrice":88,"stock":10}' | jqv "['data']['id']")
+[ -n "$PRID" ] && chk "新增商品" "yes" "yes" || chk "新增商品" "yes" "no"
+chk "更新商品价格/库存" "0" "$(curl -s -X PUT "$BASE/api/products/$PRID" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"price":66,"stock":20,"status":"已下架"}' | jqv "['code']")"
+chk "删除商品" "0" "$(curl -s -X DELETE "$BASE/api/products/$PRID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+chk "收银员无商品权限被拒(HTTP403)" "403" "$(hcode "$CASHIER" "/api/products")"
+
+echo "==== 13. 权限矩阵实时调整 ===="
+chk "调整权限(平台超管)" "0" "$(curl -s -X PUT "$BASE/api/permissions" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"roleCode":"PARK_MANAGER","moduleKey":"products","visibility":"只读"}' | jqv "['code']")"
+GOTVIS=$(curl -s "$BASE/api/permissions?role=PARK_MANAGER" -H "Authorization: Bearer $ADMIN" | python3 -c "import sys,json;l=json.load(sys.stdin)['data']['list'];print([x['visibility'] for x in l if x['moduleKey']=='products'][0] if any(x['moduleKey']=='products' for x in l) else '')")
+chk "权限已落库(只读)" "只读" "$GOTVIS"
+chk "非法可见性被拒" "400" "$(curl -s -X PUT "$BASE/api/permissions" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"roleCode":"PARK_MANAGER","moduleKey":"products","visibility":"乱写"}' | jqv "['code']")"
+chk "园区管理员无权改权限被拒" "403" "$(curl -s -X PUT "$BASE/api/permissions" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"roleCode":"X","moduleKey":"y","visibility":"只读"}' | jqv "['code']")"
+
 echo ""
 echo "================================"
 printf "通过: \033[32m%d\033[0m  失败: \033[31m%d\033[0m\n" "$PASS" "$FAIL"

@@ -12,9 +12,14 @@ func handleProductList(w http.ResponseWriter, r *http.Request) {
 	sc := scopeOf(getClaims(r))
 	where := " WHERE 1=1"
 	args := []interface{}{}
-	if !sc.IsPlatform && sc.ShopId > 0 {
-		where += " AND pr.shop_id=?"
-		args = append(args, sc.ShopId)
+	if !sc.IsPlatform {
+		if sc.ShopId > 0 {
+			where += " AND pr.shop_id=?"
+			args = append(args, sc.ShopId)
+		} else if sc.ParkId > 0 {
+			where += " AND s.park_id=?"
+			args = append(args, sc.ParkId)
+		}
 	}
 	if sid := queryInt(r, "shopId", 0); sid > 0 {
 		where += " AND pr.shop_id=?"
@@ -46,6 +51,44 @@ func handleProductCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := res.LastInsertId()
 	okMsg(w, map[string]interface{}{"id": id}, "商品创建成功")
+}
+
+func handleProductUpdate(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var req struct {
+		Name          string  `json:"name"`
+		Price         float64 `json:"price"`
+		OriginalPrice float64 `json:"originalPrice"`
+		Stock         int     `json:"stock"`
+		Status        string  `json:"status"`
+	}
+	if err := decodeBody(r, &req); err != nil {
+		fail(w, 400, 400, "请求格式错误")
+		return
+	}
+	_, err := db.Exec(`UPDATE product SET name=COALESCE(NULLIF(?,''),name),
+		price=CASE WHEN ?>0 THEN ? ELSE price END,
+		original_price=CASE WHEN ?>0 THEN ? ELSE original_price END,
+		stock=CASE WHEN ?>=0 THEN ? ELSE stock END,
+		status=COALESCE(NULLIF(?,''),status), updated_at=datetime('now','localtime') WHERE id=?`,
+		req.Name, req.Price, req.Price, req.OriginalPrice, req.OriginalPrice,
+		req.Stock, req.Stock, req.Status, id)
+	if err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "商品管理", "更新商品", fmt.Sprintf("product#%d", id))
+	okMsg(w, nil, "更新成功")
+}
+
+func handleProductDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	if _, err := db.Exec("DELETE FROM product WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "商品管理", "删除商品", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
 }
 
 // ---------------- 员工 / 岗位 ----------------

@@ -631,6 +631,47 @@ function renderShopStats() {
   `;
 }
 
+// ============ 商品管理 ============
+function renderProductList() {
+  const rows = (PRODUCTS || []).map(p => `
+    <tr>
+      <td><b>${p.name}</b></td>
+      <td>${p.shop || '-'}</td>
+      <td style="text-align:right" class="money">¥${Number(p.price).toFixed(2)}</td>
+      <td style="text-align:right;color:var(--ant-text-3);text-decoration:line-through">${p.originalPrice ? '¥' + Number(p.originalPrice).toFixed(2) : '-'}</td>
+      <td style="text-align:right">${p.stock}</td>
+      <td style="text-align:right">${p.salesCount || 0}</td>
+      <td><span class="tag ${p.status === '已上架' ? 'success' : 'default'}">${p.status}</span></td>
+      <td class="col-actions">
+        <button class="btn-link" onclick="openProductEdit(${p.id})">编辑</button>
+        <span class="divider">|</span>
+        <button class="btn-link" onclick="toggleProductStatus(${p.id})">${p.status === '已上架' ? '下架' : '上架'}</button>
+        <span class="divider">|</span>
+        <button class="btn-link danger" onclick="deleteProduct(${p.id},'${p.name}')">删除</button>
+      </td>
+    </tr>`).join('');
+  return `
+    <div class="page-header">
+      <div class="page-title">商品管理</div>
+      <div class="page-subtitle">管理${APP.view === 'platform' ? '全部园区' : APP.view.startsWith('shop') ? '本店铺' : '本园区'}的商品 · 价格 / 库存 / 上下架</div>
+    </div>
+    <div class="filter-bar">
+      <input class="input" placeholder="商品名称" style="width:200px">
+      <button class="btn btn-primary btn-sm">${antIcon('search')} 查询</button>
+      <button class="btn btn-sm">重置</button>
+      <div class="spacer"></div>
+      <button class="btn btn-primary" onclick="openProductCreate()">+ 新增商品</button>
+    </div>
+    <div class="card">
+      <table class="ant-table">
+        <thead><tr><th>商品名称</th><th>所属店铺</th><th style="text-align:right">售价</th><th style="text-align:right">原价</th><th style="text-align:right">库存</th><th style="text-align:right">销量</th><th>状态</th><th class="col-actions">操作</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="8" style="text-align:center;color:var(--ant-text-3)">暂无商品</td></tr>'}</tbody>
+      </table>
+      <div class="pagination"><span>共 ${(PRODUCTS || []).length} 条</span><button class="page-btn active">1</button></div>
+    </div>
+  `;
+}
+
 function renderShopTypes() {
   return `
     <div class="page-header">

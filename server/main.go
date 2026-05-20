@@ -101,8 +101,10 @@ func registerAPI(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/withdraws/{id}/reject", wr("finance", handleWithdrawReview(false)))
 
 	// 商品
-	mux.HandleFunc("GET /api/products", auth(handleProductList))
-	mux.HandleFunc("POST /api/products", auth(handleProductCreate))
+	mux.HandleFunc("GET /api/products", rd("products", handleProductList))
+	mux.HandleFunc("POST /api/products", wr("products", handleProductCreate))
+	mux.HandleFunc("PUT /api/products/{id}", wr("products", handleProductUpdate))
+	mux.HandleFunc("DELETE /api/products/{id}", wr("products", handleProductDelete))
 
 	// 员工 / 岗位
 	mux.HandleFunc("GET /api/employees", rd("employees", handleEmployeeList))

@@ -27,7 +27,7 @@ const VIEW_TO_ROLE = {
 const MENU_VISIBILITY = {
   platform: {
     'overview':1,'databoard':1,'parks':1,'park-list':1,'park-add':1,
-    'shops':1,'shop-list':'view','shop-stats':'view','shop-types':'view',
+    'shops':1,'shop-list':'view','product-list':1,'shop-stats':'view','shop-types':'view',
     'users':1,'user-list':'view','user-stats':1,'recharge-records':'view',
     'consumption':1,'order-list':'view','refund':'view','verify':'view',
     'sales-stats':1,'flow-stats':1,'finance':'view','park-account':'view','withdraw':'view','reconcile':'view',
@@ -41,7 +41,7 @@ const MENU_VISIBILITY = {
     'douyin':1,'douyin-dashboard':1,'douyin-records':1,'douyin-settlement':1,'douyin-config':1,
   },
   park: {
-    'shops':1,'shop-list':1,'shop-stats':1,'shop-types':1,
+    'shops':1,'shop-list':1,'product-list':1,'shop-stats':1,'shop-types':1,
     'users':1,'user-list':1,'user-stats':1,'recharge-records':1,
     'consumption':1,'order-list':1,'refund':1,'verify':1,
     'finance':1,'park-account':1,'withdraw':1,'reconcile':1,
@@ -52,6 +52,7 @@ const MENU_VISIBILITY = {
     'douyin':1,'douyin-dashboard':1,'douyin-records':1,'douyin-settlement':1,'douyin-config':1,
   },
   shop: {
+    'product-list':1,
     'consumption':1,'order-list':1,'verify':1,'refund':1,
     'withdraw':1,
     'meituan':1,'meituan-dashboard':1,'meituan-records':1,'meituan-settlement':1,
@@ -136,6 +137,7 @@ const FULL_MENU = [
     ]},
     { id: 'shops', icon: antIcon('shop'), label: '店铺管理', sub: [
       { id: 'shop-list',  label: '店铺列表',  page: 'shop-list' },
+      { id: 'product-list', label: '商品管理', page: 'product-list' },
       { id: 'shop-stats', label: '店铺统计',  page: 'shop-stats' },
       { id: 'shop-types', label: '店铺类型',  page: 'shop-types' },
     ]},
@@ -408,6 +410,17 @@ function shopData(data, field) {
   const f = field || 'shop';
   return data.filter(item => item[f] === shop);
 }
+
+// 操作日志 / 权限矩阵 (实时数据由 bootstrap 注入)
+var LOGS = [];
+var PERMISSIONS = [];
+
+// 商品列表 (实时数据由 bootstrap 从 /api/products 注入；默认演示数据)
+var PRODUCTS = [
+  { id: 1, name: '稻田双人套餐', shop: '火车餐厅', price: 128.00, originalPrice: 198.00, stock: 50, salesCount: 120, status: '已上架' },
+  { id: 2, name: '火车特色套餐', shop: '火车餐厅', price: 99.00, originalPrice: 168.00, stock: 80, salesCount: 86, status: '已上架' },
+  { id: 3, name: '树下手冲咖啡', shop: '树下咖啡', price: 39.90, originalPrice: 68.00, stock: 200, salesCount: 210, status: '已上架' },
+];
 
 // 闸机列表 (实时数据由 bootstrap 从 /api/gates 注入；默认演示数据)
 var GATES = [

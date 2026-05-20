@@ -78,7 +78,8 @@ docker build -t yfsc . && docker run -p 8080:8080 -v yfsc-data:/app/data yfsc
 | 财务 | `GET /api/finance/summary`（园区/平台收入聚合：线上/美团/抖音/余额/冻结）|
 | 园区 | `GET/POST /api/parks`、`PUT/DELETE /api/parks/{id}` |
 | 店铺 | `GET/POST /api/shops`、`PUT /api/shops/{id}`、`/api/shop-types` |
-| 客户 | `GET/POST /api/users`、`/api/users/stats`、`/api/recharges` |
+| 客户 | `GET/POST/PUT/DELETE /api/users`、`/api/users/stats`、`/api/recharges` |
+| 商品 | `GET/POST/PUT/DELETE /api/products` |
 | 消费 | `GET /api/orders`、`POST /api/orders/{no}/verify`、`/refund` |
 | 退款 | `GET /api/refunds`、`POST /api/refunds/{id}/approve`、`/reject` |
 | 财务 | `GET /api/withdraws`、`POST /api/withdraws/{id}/approve`、`/reject` |
@@ -86,7 +87,7 @@ docker build -t yfsc . && docker run -p 8080:8080 -v yfsc-data:/app/data yfsc
 | 闸机 | `GET/POST /api/gates`、`PUT /api/gates/{id}/toggle`、`DELETE /api/gates/{id}`、`/api/faces`、`/api/entry-records` |
 | 活动 | `GET/POST /api/activities`、`POST /api/activities/{id}/audit`、`/end` |
 | 第三方 | `/api/platform/verify-records`、`/settlements`、`/store-configs`、`verify/prepare\|execute\|{id}/revoke` |
-| 系统 | `/api/system/mini-programs`、`/api/system/logs`、`/api/permissions` |
+| 系统 | `GET/PUT /api/system/mini-programs`、`/api/system/logs`、`GET/PUT /api/permissions`（角色权限矩阵实时调整）|
 
 ## 目录结构
 

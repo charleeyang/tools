@@ -6,17 +6,17 @@ import "log"
 // 值: 1 -> 可操作, 2 -> 只读
 var permPlatform = map[string]int{
 	"overview": 1, "databoard": 1, "sales-stats": 1, "flow-stats": 1,
-	"parks": 1, "shops": 2, "users": 2, "consumption": 2,
+	"parks": 1, "shops": 2, "products": 1, "users": 2, "consumption": 2,
 	"meituan": 1, "douyin": 1, "finance": 2, "employees": 1,
 	"gates": 2, "activities": 1, "permissions": 1, "mp-mgmt": 1, "settings": 1,
 }
 var permPark = map[string]int{
 	"overview": 1, "databoard": 1, "sales-stats": 1, "flow-stats": 1,
-	"shops": 1, "users": 1, "consumption": 1, "meituan": 1, "douyin": 1,
+	"shops": 1, "products": 1, "users": 1, "consumption": 1, "meituan": 1, "douyin": 1,
 	"finance": 1, "gates": 1, "activities": 1, "mp-mgmt": 1, "employees": 2,
 }
 var permShopAdmin = map[string]int{
-	"consumption": 1, "verify": 1, "meituan": 1, "douyin": 1, "finance": 1, "withdraw": 1,
+	"consumption": 1, "verify": 1, "products": 1, "meituan": 1, "douyin": 1, "finance": 1, "withdraw": 1,
 }
 var permShopCashier = map[string]int{
 	"consumption": 1, "verify": 1, "meituan": 1, "douyin": 1,

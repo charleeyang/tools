@@ -333,44 +333,47 @@ function renderRolePerm() {
       </table>
     </div>
 
+    ${renderPermMatrix()}
+  `;
+}
+
+// 实时权限矩阵 (数据来自 /api/permissions, 平台超管可点击单元格调整)
+const PERM_ROLES = [
+  ['ADMIN_PLATFORM', '平台超级管理员'], ['PLATFORM_OPER', '总部运营'],
+  ['PARK_ADMIN', '园区管理员'], ['PARK_MANAGER', '园区经理'],
+  ['SHOP_ADMIN', '商户管理员'], ['SHOP_CASHIER', '商户收银员'],
+];
+const PERM_MODULES = [
+  ['overview', '园区总览'], ['databoard', '数据看板'], ['sales-stats', '销售统计'], ['flow-stats', '客流统计'],
+  ['parks', '园区管理'], ['shops', '店铺管理'], ['products', '商品管理'], ['users', '客户管理'],
+  ['consumption', '消费管理'], ['verify', '核销操作'], ['meituan', '美团核销'], ['douyin', '抖音核销'],
+  ['finance', '财务管理'], ['withdraw', '提现'], ['gates', '闸机管理'], ['activities', '活动管理'],
+  ['employees', '员工管理'], ['permissions', '权限管理'], ['mp-mgmt', '小程序管理'], ['settings', '系统设置'],
+];
+function permVis(role, mod) {
+  const it = (PERMISSIONS || []).find(p => p.roleCode === role && p.moduleKey === mod);
+  return it ? it.visibility : '隐藏';
+}
+function permCell(vis) {
+  if (vis === '可操作') return { cls: 'yes', sym: '✓' };
+  if (vis === '只读') return { cls: 'partial', sym: '◐' };
+  return { cls: 'no', sym: '—' };
+}
+function renderPermMatrix() {
+  return `
     <div class="card">
-      <div class="card-head"><div class="card-title">权限矩阵 · 全景视图</div>
-        <div class="card-extra">✓ = 完全可见可操作 ｜ ◐ = 仅可见 ｜ — = 无权限</div>
+      <div class="card-head"><div class="card-title">权限矩阵 · 实时可编辑</div>
+        <div class="card-extra">✓ 可操作 ｜ ◐ 只读 ｜ — 隐藏 · 点击单元格循环切换（需平台超管）</div>
       </div>
       <div class="card-body" style="padding:0;overflow-x:auto">
         <table class="perm-matrix">
-          <thead>
-            <tr>
-              <th class="module">功能模块</th>
-              <th>平台超级管理员</th><th>总部运营</th>
-              <th>园区管理员</th><th>园区经理</th>
-              <th>商户管理员</th><th>商户收银员</th>
-            </tr>
-          </thead>
+          <thead><tr><th class="module">功能模块</th>${PERM_ROLES.map(r => `<th>${r[1]}</th>`).join('')}</tr></thead>
           <tbody>
-            ${[
-              {m:'园区总览/数据看板',perms:['yes','yes','yes','yes','no','no']},
-              {m:'园区管理 (增/删/改)',perms:['yes','no','no','no','no','no']},
-              {m:'店铺管理 (本园区)',perms:['yes','partial','yes','partial','no','no']},
-              {m:'店铺管理 (本店)',perms:['yes','yes','yes','yes','yes','no']},
-              {m:'用户列表 / 充值记录',perms:['yes','partial','yes','partial','partial','no']},
-              {m:'订单管理',perms:['yes','partial','yes','partial','yes','no']},
-              {m:'核销操作',perms:['yes','no','yes','no','yes','yes']},
-              {m:'退款审核',perms:['yes','no','yes','no','partial','no']},
-              {m:'销售/客流统计',perms:['yes','yes','yes','yes','partial','no']},
-              {m:'财务管理 / 提现',perms:['yes','partial','yes','no','partial','no']},
-              {m:'员工管理',perms:['yes','no','yes','no','partial','no']},
-              {m:'闸机/人脸管理',perms:['yes','partial','yes','partial','no','no']},
-              {m:'活动推送/审核',perms:['yes','yes','yes','no','no','no']},
-              {m:'数据迁移',perms:['yes','no','no','no','no','no']},
-              {m:'系统配置 / 角色权限',perms:['yes','no','no','no','no','no']},
-              {m:'操作日志',perms:['yes','yes','partial','partial','no','no']},
-            ].map(r => `
+            ${PERM_MODULES.map(([mk, ml]) => `
               <tr>
-                <td class="module">${r.m}</td>
-                ${r.perms.map(p => `<td class="${p}">${p==='yes'?'✓':p==='no'?'—':'◐'}</td>`).join('')}
-              </tr>
-            `).join('')}
+                <td class="module">${ml}</td>
+                ${PERM_ROLES.map(([rc]) => { const c = permCell(permVis(rc, mk)); return `<td class="${c.cls}" style="cursor:pointer" onclick="cyclePerm('${rc}','${mk}')">${c.sym}</td>`; }).join('')}
+              </tr>`).join('')}
           </tbody>
         </table>
       </div>
@@ -522,7 +525,7 @@ function openMpEditForm(id) {
   showModal({
     title: '编辑小程序 · ' + mp.name,
     body: mpConfigForm(mp),
-    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="closeModal();showToast('配置已保存 · ' + '${mp.name}')">保存</button>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitMpEdit(${mp.id})">保存</button>`,
     wide: true,
   });
 }
@@ -561,16 +564,16 @@ function mpConfigForm(mp) {
       </div>
       <div class="form-item">
         <label class="form-label">回调地址 (Webhook)</label>
-        <input class="input" value="${mp.callbackUrl || ''}" placeholder="https://api.yuanfu-rice.com/wx/.../callback">
+        <input id="mpCallback" class="input" value="${mp.callbackUrl || ''}" placeholder="https://api.yuanfu-rice.com/wx/.../callback">
       </div>
       <div class="form-row">
         <div class="form-item">
           <label class="form-label">支付商户号</label>
-          <input class="input" value="${mp.mchId || ''}" placeholder="微信支付商户号">
+          <input id="mpMch" class="input" value="${mp.mchId || ''}" placeholder="微信支付商户号">
         </div>
         <div class="form-item">
           <label class="form-label">版本号</label>
-          <input class="input" value="${mp.version || 'v1.0.0'}" placeholder="v1.0.0">
+          <input id="mpVer" class="input" value="${mp.version || 'v1.0.0'}" placeholder="v1.0.0">
         </div>
       </div>
       <div class="form-item">
@@ -598,17 +601,25 @@ function renderLogs() {
     </div>
     <div class="card">
       <table class="ant-table">
-        <thead><tr><th>日志ID</th><th>用户名</th><th>操作类型</th><th>操作模块</th><th>操作描述</th><th>IP地址</th><th>状态</th><th>操作时间</th></tr></thead>
+        <thead><tr><th>日志ID</th><th>操作人</th><th>角色</th><th>操作类型</th><th>操作模块</th><th>操作描述</th><th>状态</th><th>操作时间</th></tr></thead>
         <tbody>
-          <tr><td>2533</td><td>admin01</td><td><span class="tag warning">修改</span></td><td>角色管理</td><td class="col-mono">PUT /auth/role/perm</td><td>172.21.0.2</td><td><span class="tag success">成功</span></td><td>2026-05-14 14:25</td></tr>
-          <tr><td>2532</td><td>park-hm</td><td><span class="tag success">新增</span></td><td>活动管理</td><td class="col-mono">POST /activity/create</td><td>172.21.0.5</td><td><span class="tag success">成功</span></td><td>2026-05-14 14:20</td></tr>
-          <tr><td>2531</td><td>hcct-mgr</td><td><span class="tag processing">查询</span></td><td>订单管理</td><td class="col-mono">GET /order/list?status=paid</td><td>10.0.0.12</td><td><span class="tag success">成功</span></td><td>2026-05-14 14:15</td></tr>
-          <tr><td>2530</td><td>anonymous</td><td><span class="tag warning">登录</span></td><td>系统管理</td><td class="col-mono">POST /auth/login</td><td>10.0.0.18</td><td><span class="tag error">失败</span></td><td>2026-05-14 14:10</td></tr>
-          <tr><td>2529</td><td>admin01</td><td><span class="tag error">删除</span></td><td>员工管理</td><td class="col-mono">DELETE /employee/12</td><td>172.21.0.2</td><td><span class="tag success">成功</span></td><td>2026-05-14 13:55</td></tr>
-          <tr><td>2528</td><td>park-hm</td><td><span class="tag warning">修改</span></td><td>退款处理</td><td class="col-mono">PUT /refund/RF20260514114009</td><td>172.21.0.5</td><td><span class="tag success">成功</span></td><td>2026-05-14 13:30</td></tr>
+          ${(LOGS || []).map(l => {
+            const act = l.action || '';
+            const cls = /删除/.test(act) ? 'error' : /新增|创建/.test(act) ? 'success' : /查询|登录/.test(act) ? 'processing' : 'warning';
+            return `<tr>
+              <td>${l.id}</td>
+              <td>${l.operator || '-'}</td>
+              <td class="col-mono">${l.roleCode || '-'}</td>
+              <td><span class="tag ${cls}">${act}</span></td>
+              <td>${l.module || '-'}</td>
+              <td class="col-mono">${l.detail || '-'}</td>
+              <td><span class="tag success">成功</span></td>
+              <td>${l.createdAt || ''}</td>
+            </tr>`;
+          }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--ant-text-3)">暂无日志</td></tr>'}
         </tbody>
       </table>
-      <div class="pagination"><span>共 1,607 条</span><button class="page-btn active">1</button><button class="page-btn">2</button><button class="page-btn">3</button><button class="page-btn">...</button><button class="page-btn">161</button></div>
+      <div class="pagination"><span>共 ${(LOGS || []).length} 条</span><button class="page-btn active">1</button></div>
     </div>
   `;
 }

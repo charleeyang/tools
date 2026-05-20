@@ -127,6 +127,9 @@ async function loadLiveData() {
     ['mp', '/api/system/mini-programs', idFn, v => v.list],
     ['withdraws', '/api/withdraws', idFn, v => v.list],
     ['gates', '/api/gates', idFn, v => v.list],
+    ['products', '/api/products', idFn, v => v.list],
+    ['logs', '/api/system/logs', idFn, v => v.list],
+    ['perms', '/api/permissions', idFn, v => v.list],
     ['finance', '/api/finance/summary', idFn, v => v],
     ['overview', '/api/statistics/overview', idFn, v => v],
   ];
@@ -159,6 +162,9 @@ async function loadLiveData() {
   if (got.mp) { MINI_PROGRAMS = got.mp; }
   if (got.withdraws) { applyWithdraws(got.withdraws); }
   if (got.gates) { GATES = got.gates; }
+  if (got.products) { PRODUCTS = got.products; }
+  if (got.logs) { LOGS = got.logs; }
+  if (got.perms) { PERMISSIONS = got.perms; }
   if (got.finance) { PARK_FINANCE = got.finance; }
   if (got.overview) { window.LIVE.overview = got.overview; }
   window.LIVE.loaded = true;
@@ -513,6 +519,93 @@ function deleteActivity(id, title) {
     try { await YFSC.del('/api/activities/' + id); await reloadActivities(); showToast('已删除活动：' + title); rerender('activity-list'); }
     catch (e) { showToast('删除失败：' + e.message); }
   });
+}
+
+// ---- 商品管理 ----
+async function reloadProducts() { try { PRODUCTS = (await YFSC.get('/api/products')).list; } catch (e) {} }
+async function openProductCreate() {
+  let shops = [];
+  try { shops = (await YFSC.get('/api/shops?size=100')).list; } catch (e) {}
+  const shopOpts = shops.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  showModal({
+    title: '新增商品',
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">商品名称 *</label><input id="prName" class="input"></div>
+      <div class="form-item"><label class="form-label">所属店铺 *</label><select id="prShop" class="select" style="width:100%">${shopOpts}</select></div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">售价 *</label><input id="prPrice" class="input" type="number" placeholder="0.00"></div>
+        <div class="form-item"><label class="form-label">原价</label><input id="prOrig" class="input" type="number" placeholder="0.00"></div>
+      </div>
+      <div class="form-item"><label class="form-label">库存</label><input id="prStock" class="input" type="number" value="0"></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitProductCreate()">确定添加</button>`,
+  });
+}
+async function submitProductCreate() {
+  const name = fval('prName');
+  if (!name) { showToast('请填写商品名称'); return; }
+  try {
+    await YFSC.post('/api/products', { name, shopId: Number(fval('prShop')),
+      price: Number(fval('prPrice')) || 0, originalPrice: Number(fval('prOrig')) || 0, stock: Number(fval('prStock')) || 0 });
+    await reloadProducts(); closeModal(); showToast('✅ 商品已添加：' + name); rerender('product-list');
+  } catch (e) { showToast('添加失败：' + e.message); }
+}
+function openProductEdit(id) {
+  const p = (PRODUCTS || []).find(x => x.id === id); if (!p) return;
+  showModal({
+    title: '编辑商品 · ' + p.name,
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">商品名称</label><input id="eprName" class="input" value="${p.name}"></div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">售价</label><input id="eprPrice" class="input" type="number" value="${p.price}"></div>
+        <div class="form-item"><label class="form-label">原价</label><input id="eprOrig" class="input" type="number" value="${p.originalPrice || 0}"></div>
+      </div>
+      <div class="form-item"><label class="form-label">库存</label><input id="eprStock" class="input" type="number" value="${p.stock}"></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitProductEdit(${id})">保存</button>`,
+  });
+}
+async function submitProductEdit(id) {
+  try {
+    await YFSC.put('/api/products/' + id, { name: fval('eprName'),
+      price: Number(fval('eprPrice')) || 0, originalPrice: Number(fval('eprOrig')) || 0, stock: Number(fval('eprStock')) });
+    await reloadProducts(); closeModal(); showToast('✅ 商品已更新'); rerender('product-list');
+  } catch (e) { showToast('更新失败：' + e.message); }
+}
+async function toggleProductStatus(id) {
+  const p = (PRODUCTS || []).find(x => x.id === id); if (!p) return;
+  const ns = p.status === '已上架' ? '已下架' : '已上架';
+  try { await YFSC.put('/api/products/' + id, { status: ns }); await reloadProducts(); showToast(ns); rerender('product-list'); }
+  catch (e) { showToast('操作失败：' + e.message); }
+}
+function deleteProduct(id, name) {
+  confirmDel(`确认删除商品「${name}」？`, async () => {
+    try { await YFSC.del('/api/products/' + id); await reloadProducts(); showToast('已删除商品：' + name); rerender('product-list'); }
+    catch (e) { showToast('删除失败：' + e.message); }
+  });
+}
+
+// ---- 小程序配置编辑 ----
+async function submitMpEdit(id) {
+  try {
+    await YFSC.put('/api/system/mini-programs/' + id, { callbackUrl: fval('mpCallback'), mchId: fval('mpMch'), version: fval('mpVer') });
+    try { MINI_PROGRAMS = (await YFSC.get('/api/system/mini-programs')).list; } catch (e) {}
+    closeModal(); showToast('✅ 配置已保存'); rerender('mp-config');
+  } catch (e) { showToast('保存失败：' + e.message); }
+}
+
+// ---- 权限矩阵: 点击单元格循环 可操作->只读->隐藏 ----
+async function cyclePerm(roleCode, moduleKey) {
+  const cur = (PERMISSIONS || []).find(p => p.roleCode === roleCode && p.moduleKey === moduleKey);
+  const order = ['可操作', '只读', '隐藏'];
+  const idx = cur ? order.indexOf(cur.visibility) : 2;
+  const next = order[(idx + 1) % 3];
+  try {
+    await YFSC.put('/api/permissions', { roleCode, moduleKey, visibility: next });
+    PERMISSIONS = (await YFSC.get('/api/permissions')).list;
+    showToast(roleCode + ' / ' + moduleKey + ' → ' + next);
+    rerender('role-perm');
+  } catch (e) { showToast('调整失败：' + e.message); }
 }
 
 // 提现: 中文状态 -> 原型英文状态, 并按待审核/历史拆分

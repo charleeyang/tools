@@ -15,7 +15,7 @@ function renderEmployeeList() {
       <button class="btn btn-primary btn-sm">查询</button>
       <div class="spacer"></div>
       <button class="btn">${antIcon('download')} 导出</button>
-      <button class="btn btn-primary">+ 新增员工</button>
+      <button class="btn btn-primary" onclick="openEmployeeCreate()">+ 新增员工</button>
     </div>
     <div class="card">
       <table class="ant-table">
@@ -81,7 +81,7 @@ function renderGateList() {
       <tr>
         <td>${i + 1}</td>
         <td><b>${g.name}</b></td>
-        <td><span class="tag ${g.direction === '出' ? 'error' : 'processing'}">${g.type || '-'}</span></td>
+        <td><span class="tag ${g.direction === '出' ? 'error' : 'processing'}">${g.direction === '出' ? '出口' : '入口'}</span></td>
         <td>${g.direction || '-'}</td>
         <td class="col-mono">${g.deviceSn || '-'}</td>
         <td><span class="tag ${enabled ? 'success' : 'default'}">${enabled ? '启用' : '禁用'}</span></td>
@@ -253,14 +253,14 @@ function renderActivityCreate() {
         </div>
 
         <div class="form-row">
-          <div class="form-item"><label class="form-label required">活动标题</label><input class="input" placeholder="如：夏日稻田音乐节"></div>
+          <div class="form-item"><label class="form-label required">活动标题</label><input id="actTitle" class="input" placeholder="如：夏日稻田音乐节"></div>
           <div class="form-item"><label class="form-label required">活动类型</label>
-            <select class="select"><option>优惠券活动</option><option>满减活动</option><option>限时折扣</option><option>节日活动</option><option>会员专享</option></select>
+            <select id="actType" class="select"><option>优惠券活动</option><option>满减活动</option><option>限时折扣</option><option>节日活动</option><option>会员专享</option></select>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-item"><label class="form-label required">开始时间</label><input class="input" placeholder="选择日期"></div>
-          <div class="form-item"><label class="form-label required">结束时间</label><input class="input" placeholder="选择日期"></div>
+          <div class="form-item"><label class="form-label required">开始时间</label><input id="actStart" class="input" placeholder="如 2026-06-01"></div>
+          <div class="form-item"><label class="form-label required">结束时间</label><input id="actEnd" class="input" placeholder="如 2026-06-03"></div>
         </div>
         <div class="form-item">
           <label class="form-label">活动封面图</label>
@@ -289,7 +289,7 @@ function renderActivityCreate() {
         <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--ant-border-secondary);padding-top:20px">
           <button class="btn" onclick="goPage('activity-list')">取消</button>
           <button class="btn">保存草稿</button>
-          <button class="btn btn-primary" onclick="showToast('活动已创建并发起审核');goPage('activity-list')">下一步</button>
+          <button class="btn btn-primary" onclick="submitActivityCreate()">下一步</button>
         </div>
       </div>
     </div>

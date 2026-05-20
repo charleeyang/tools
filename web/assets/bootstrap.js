@@ -220,6 +220,139 @@ async function endActivity(id) {
   } catch (e) { showToast('操作失败：' + e.message); }
 }
 
+// ---- 创建表单 (园区/店铺/客户/员工/活动) ----
+const fval = id => { const e = document.getElementById(id); return e ? (e.value || '').trim() : ''; };
+
+async function submitParkCreate() {
+  const name = fval('parkName'), code = fval('parkCode');
+  if (!name || !code) { showToast('请填写园区名称与编码'); return; }
+  try {
+    await YFSC.post('/api/parks', { name, code, address: fval('parkAddr'),
+      contactPerson: fval('parkContact'), contactPhone: fval('parkPhone'), businessHours: fval('parkHours') });
+    const r = await YFSC.get('/api/parks'); PARKS = mapParks(r.list);
+    showToast('✅ 园区已创建：' + name);
+    if (typeof goPage === 'function') goPage('park-list');
+  } catch (e) { showToast('创建失败：' + e.message); }
+}
+
+async function openShopCreate() {
+  let types = [];
+  try { types = (await YFSC.get('/api/shop-types')).list; } catch (e) {}
+  const parkOpts = (PARKS || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  const typeOpts = types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  showModal({
+    title: '添加店铺',
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">店铺名称 *</label><input id="shopName" class="input" placeholder="如 火车餐厅"></div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">所属园区 *</label><select id="shopPark" class="select" style="width:100%">${parkOpts}</select></div>
+        <div class="form-item"><label class="form-label">店铺类型</label><select id="shopType" class="select" style="width:100%">${typeOpts}</select></div>
+      </div>
+      <div class="form-item"><label class="form-label">店铺地址</label><input id="shopAddr" class="input" placeholder="详细地址"></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitShopCreate()">确定添加</button>`,
+  });
+}
+async function submitShopCreate() {
+  const name = fval('shopName');
+  if (!name) { showToast('请填写店铺名称'); return; }
+  try {
+    await YFSC.post('/api/shops', { name, parkId: Number(fval('shopPark')),
+      typeId: Number(fval('shopType')), address: fval('shopAddr') });
+    const r = await YFSC.get('/api/shops?size=100'); SHOPS = mapShops(r.list);
+    closeModal(); showToast('✅ 店铺已添加：' + name);
+    if (typeof renderPCContent === 'function') renderPCContent('shop-list');
+  } catch (e) { showToast('添加失败：' + e.message); }
+}
+
+function openUserCreate() {
+  showModal({
+    title: '手动添加客户',
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">昵称</label><input id="uNick" class="input" placeholder="客户昵称"></div>
+      <div class="form-item"><label class="form-label">手机号 *</label><input id="uPhone" class="input" placeholder="11 位手机号"></div>
+      <div class="form-item"><label class="form-label">会员等级</label>
+        <select id="uLevel" class="select" style="width:100%"><option>普通用户</option><option>VIP1</option><option>VIP2</option><option>VIP3</option></select></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitUserCreate()">确定添加</button>`,
+  });
+}
+async function submitUserCreate() {
+  const phone = fval('uPhone');
+  if (!phone) { showToast('请填写手机号'); return; }
+  try {
+    await YFSC.post('/api/users', { nickname: fval('uNick'), phone, memberLevel: fval('uLevel') });
+    const r = await YFSC.get('/api/users?size=100'); USERS = mapUsers(r.list);
+    closeModal(); showToast('✅ 客户已添加');
+    if (typeof renderPCContent === 'function') renderPCContent('user-list');
+  } catch (e) { showToast('添加失败：' + e.message); }
+}
+
+async function openEmployeeCreate() {
+  let positions = [], shops = [];
+  try { positions = (await YFSC.get('/api/positions')).list; } catch (e) {}
+  try { shops = (await YFSC.get('/api/shops?size=100')).list; } catch (e) {}
+  const parkOpts = '<option value="">（不限/总部）</option>' + (PARKS || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  const shopOpts = '<option value="">（不限）</option>' + shops.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const posOpts = '<option value="">（不限）</option>' + positions.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  showModal({
+    title: '新增员工',
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">姓名 *</label><input id="eName" class="input"></div>
+        <div class="form-item"><label class="form-label">登录账号 *</label><input id="eUser" class="input"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">手机号</label><input id="ePhone" class="input"></div>
+        <div class="form-item"><label class="form-label">角色 *</label>
+          <select id="eRole" class="select" style="width:100%">
+            <option value="PARK_ADMIN">园区管理员</option><option value="PARK_MANAGER">园区经理</option>
+            <option value="SHOP_ADMIN">商户管理员</option><option value="SHOP_CASHIER">商户收银员</option>
+            <option value="PLATFORM_OPER">总部运营</option><option value="ADMIN_PLATFORM">平台超级管理员</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">所属园区</label><select id="ePark" class="select" style="width:100%">${parkOpts}</select></div>
+        <div class="form-item"><label class="form-label">所属店铺</label><select id="eShop" class="select" style="width:100%">${shopOpts}</select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">岗位</label><select id="ePos" class="select" style="width:100%">${posOpts}</select></div>
+        <div class="form-item"><label class="form-label">初始密码</label><input id="ePwd" class="input" placeholder="默认 123456"></div>
+      </div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitEmployeeCreate()">确定添加</button>`,
+  });
+}
+async function submitEmployeeCreate() {
+  const name = fval('eName'), username = fval('eUser'), roleCode = fval('eRole');
+  if (!name || !username) { showToast('请填写姓名与登录账号'); return; }
+  try {
+    await YFSC.post('/api/employees', {
+      name, username, roleCode, phone: fval('ePhone'),
+      parkId: Number(fval('ePark')) || 0, shopId: Number(fval('eShop')) || 0,
+      positionId: Number(fval('ePos')) || 0, password: fval('ePwd') || '123456',
+    });
+    const r = await YFSC.get('/api/employees'); EMPLOYEES = mapEmployees(r.list);
+    closeModal(); showToast('✅ 员工已创建：' + name);
+    if (typeof renderPCContent === 'function') renderPCContent('employee-list');
+  } catch (e) { showToast('创建失败：' + e.message); }
+}
+
+async function submitActivityCreate() {
+  const title = fval('actTitle');
+  if (!title) { showToast('请填写活动标题'); return; }
+  try {
+    await YFSC.post('/api/activities', { title, type: fval('actType'),
+      parkScope: '全部园区', shopScope: '全部商户', startAt: fval('actStart'), endAt: fval('actEnd') });
+    await reloadActivities();
+    showToast('✅ 活动已创建并发起审核');
+    if (typeof goPage === 'function') goPage('activity-list');
+  } catch (e) { showToast('创建失败：' + e.message); }
+}
+
 // 提现: 中文状态 -> 原型英文状态, 并按待审核/历史拆分
 const WD_STATUS = { '待审核': 'pending', '已支付': 'paid', '已通过': 'paid', '已驳回': 'rejected' };
 function applyWithdraws(list) {

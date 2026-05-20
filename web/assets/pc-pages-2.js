@@ -17,7 +17,7 @@ function renderUserList() {
       <button class="btn btn-sm">重置</button>
       <div class="spacer"></div>
       <button class="btn">${antIcon('download')} 导出</button>
-      <button class="btn btn-primary">+ 手动添加</button>
+      <button class="btn btn-primary" onclick="openUserCreate()">+ 手动添加</button>
     </div>
     <div class="card">
       <table class="ant-table">

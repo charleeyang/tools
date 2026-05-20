@@ -388,32 +388,32 @@ function renderParkAdd() {
         <div class="form-row">
           <div class="form-item">
             <label class="form-label required">园区名称</label>
-            <input class="input" placeholder="如：黄梅袁夫稻田">
+            <input id="parkName" class="input" placeholder="如：黄梅袁夫稻田">
           </div>
           <div class="form-item">
             <label class="form-label required">园区编码</label>
-            <input class="input" placeholder="自动生成或手动输入" value="PARK_HM_002">
+            <input id="parkCode" class="input" placeholder="自动生成或手动输入" value="PARK_HM_002">
             <div class="form-help">用于系统内部识别，创建后不可修改</div>
           </div>
         </div>
         <div class="form-row">
           <div class="form-item">
             <label class="form-label">联系人</label>
-            <input class="input" placeholder="请输入联系人姓名">
+            <input id="parkContact" class="input" placeholder="请输入联系人姓名">
           </div>
           <div class="form-item">
             <label class="form-label">联系电话</label>
-            <input class="input" placeholder="请输入联系电话">
+            <input id="parkPhone" class="input" placeholder="请输入联系电话">
           </div>
         </div>
         <div class="form-item">
           <label class="form-label required">园区地址</label>
-          <input class="input" placeholder="请输入详细地址">
+          <input id="parkAddr" class="input" placeholder="请输入详细地址">
         </div>
         <div class="form-row">
           <div class="form-item">
             <label class="form-label">营业时间</label>
-            <input class="input" placeholder="如 09:00 - 21:00">
+            <input id="parkHours" class="input" placeholder="如 09:00 - 21:00">
           </div>
           <div class="form-item">
             <label class="form-label">园区 LOGO</label>
@@ -439,7 +439,7 @@ function renderParkAdd() {
         </div>
         <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--ant-border-secondary);padding-top:20px;margin-top:8px">
           <button class="btn" onclick="goPage('park-list')">取消</button>
-          <button class="btn btn-primary" onclick="showToast('园区已保存');goPage('park-list')">保存</button>
+          <button class="btn btn-primary" onclick="submitParkCreate()">保存</button>
         </div>
       </div>
     </div>
@@ -462,7 +462,7 @@ function renderShopList() {
       <button class="btn btn-primary btn-sm">${antIcon('search')} 查询</button>
       <button class="btn btn-sm">重置</button>
       <div class="spacer"></div>
-      <button class="btn btn-primary">+ 添加店铺</button>
+      <button class="btn btn-primary" onclick="openShopCreate()">+ 添加店铺</button>
     </div>
 
     <div class="card">

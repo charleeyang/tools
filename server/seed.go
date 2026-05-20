@@ -139,12 +139,11 @@ func seedAll() {
 		('park-wh','周八','13600136000',2,NULL,2,'PARK_ADMIN',?, '启用',1,'2026-04-22 10:20')`,
 		pwAdmin, pw, pw, pw, pw, pw)
 
-	// ---- 闸机 ----
+	// ---- 闸机 (对齐原型展示) ----
 	mustExec(`INSERT INTO gate(park_id,name,type,direction,device_sn,enabled,online_status,today_pass) VALUES
-		(1,'黄梅园区南门-入','人脸闸机','进','SN-HM-S-IN-001',1,1,328),
-		(1,'黄梅园区南门-出','人脸闸机','出','SN-HM-S-OUT-002',1,1,301),
-		(1,'黄梅园区北门-入','扫码闸机','进','SN-HM-N-IN-003',1,0,0),
-		(2,'武汉园区正门-入','人脸闸机','进','SN-WH-M-IN-001',1,1,156)`)
+		(1,'主入口 1#','人脸闸机','进','E014370C2321',1,1,78),
+		(1,'主入口 2#','人脸闸机','出','E014370C2322',1,1,50),
+		(1,'侧门 3#','扫码闸机','进','E014370C2323',0,0,0)`)
 
 	// ---- 人脸 ----
 	mustExec(`INSERT INTO face(user_id,feature_id,authorized_gates,status) VALUES
@@ -157,7 +156,7 @@ func seedAll() {
 		(3004,1,'进','人脸','2026-05-14 09:12'),
 		(3002,1,'进','人脸','2026-05-14 10:01'),
 		(3004,2,'出','人脸','2026-05-14 15:48'),
-		(3001,4,'进','人脸','2026-05-14 11:20')`)
+		(3001,1,'进','扫码','2026-05-14 11:20')`)
 
 	// ---- 活动 ----
 	mustExec(`INSERT INTO activity(title,type,park_scope,shop_scope,start_at,end_at,status,exposure,joins,orders,verify_rate) VALUES

@@ -75,6 +75,7 @@ docker build -t yfsc . && docker run -p 8080:8080 -v yfsc-data:/app/data yfsc
 |------|------|
 | 认证 | `POST /api/auth/login`、`GET /api/auth/me` |
 | 统计 | `GET /api/statistics/overview` |
+| 财务 | `GET /api/finance/summary`（园区/平台收入聚合：线上/美团/抖音/余额/冻结）|
 | 园区 | `GET/POST /api/parks`、`PUT/DELETE /api/parks/{id}` |
 | 店铺 | `GET/POST /api/shops`、`PUT /api/shops/{id}`、`/api/shop-types` |
 | 客户 | `GET/POST /api/users`、`/api/users/stats`、`/api/recharges` |
@@ -82,8 +83,8 @@ docker build -t yfsc . && docker run -p 8080:8080 -v yfsc-data:/app/data yfsc
 | 退款 | `GET /api/refunds`、`POST /api/refunds/{id}/approve`、`/reject` |
 | 财务 | `GET /api/withdraws`、`POST /api/withdraws/{id}/approve`、`/reject` |
 | 员工 | `GET/POST /api/employees`、`/api/positions` |
-| 闸机 | `/api/gates`、`/api/faces`、`/api/entry-records` |
-| 活动 | `GET/POST /api/activities` |
+| 闸机 | `GET/POST /api/gates`、`PUT /api/gates/{id}/toggle`、`DELETE /api/gates/{id}`、`/api/faces`、`/api/entry-records` |
+| 活动 | `GET/POST /api/activities`、`POST /api/activities/{id}/audit`、`/end` |
 | 第三方 | `/api/platform/verify-records`、`/settlements`、`/store-configs`、`verify/prepare\|execute\|{id}/revoke` |
 | 系统 | `/api/system/mini-programs`、`/api/system/logs`、`/api/permissions` |
 
@@ -110,7 +111,8 @@ docs/          PRD V3.0 + 开发实施计划
 - 数据库：以 SQLite 落地 PRD 全部 27 张表（生产可平滑迁移至 MySQL 8）。
 - 后端：以标准库 `net/http` 实现计划中的认证 / RBAC / 视角中间件与全部模块端点
   （等价于 go-zero 自动生成的 handler+logic 分层）。
-- 前端：复用原型四端 UI，新增登录门禁与实时数据层对接真实后端；财务对账等少量
-  纯展示页仍用原型内置数据。
+- 前端：复用原型四端 UI，新增登录门禁与实时数据层对接真实后端。园区总览、店铺/
+  客户/订单/充值/退款/员工/活动、美团抖音核销、园区账户财务汇总、提现审核、闸机
+  增删启停均跑实时数据与真实写操作；仅对账单等少量页仍用原型内置数据。
 - 三方对接（美团/抖音）：实现验券 prepare/execute/revoke 状态机与门店绑定校验，
   外部 HTTP 调用为可替换的模拟实现（签名算法见实施计划 G 章）。

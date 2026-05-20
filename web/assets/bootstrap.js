@@ -126,6 +126,8 @@ async function loadLiveData() {
     ['dyCfg', '/api/platform/store-configs?platform=douyin', idFn, v => v.list],
     ['mp', '/api/system/mini-programs', idFn, v => v.list],
     ['withdraws', '/api/withdraws', idFn, v => v.list],
+    ['gates', '/api/gates', idFn, v => v.list],
+    ['finance', '/api/finance/summary', idFn, v => v],
     ['overview', '/api/statistics/overview', idFn, v => v],
   ];
   const results = await Promise.allSettled(tasks.map(t => YFSC.get(t[1])));
@@ -156,8 +158,66 @@ async function loadLiveData() {
   if (got.dyCfg) { DOUYIN_STORE_CONFIGS = got.dyCfg; }
   if (got.mp) { MINI_PROGRAMS = got.mp; }
   if (got.withdraws) { applyWithdraws(got.withdraws); }
+  if (got.gates) { GATES = got.gates; }
+  if (got.finance) { PARK_FINANCE = got.finance; }
   if (got.overview) { window.LIVE.overview = got.overview; }
   window.LIVE.loaded = true;
+}
+
+// ---- 闸机写操作 (真实 API, 覆盖原型) ----
+async function reloadGates() {
+  try { const r = await YFSC.get('/api/gates'); GATES = r.list; } catch (e) {}
+}
+async function submitGateCreate() {
+  const name = (document.getElementById('gateName') || {}).value;
+  const sn = (document.getElementById('gateSn') || {}).value;
+  const type = (document.getElementById('gateType') || {}).value;
+  const direction = (document.getElementById('gateDir') || {}).value;
+  if (!name || !sn) { showToast('请填写名称与设备SN'); return; }
+  try {
+    await YFSC.post('/api/gates', { name, deviceSn: sn, type, direction });
+    await reloadGates();
+    closeModal();
+    showToast('✅ 闸机已添加：' + name);
+    if (typeof renderPCContent === 'function') renderPCContent('gate-list');
+  } catch (e) { showToast('添加失败：' + e.message); }
+}
+async function toggleGate(id) {
+  try {
+    const d = await YFSC.put('/api/gates/' + id + '/toggle', {});
+    await reloadGates();
+    showToast(d.enabled ? '闸机已启用' : '闸机已禁用');
+    if (typeof renderPCContent === 'function') renderPCContent('gate-list');
+  } catch (e) { showToast('操作失败：' + e.message); }
+}
+async function deleteGate(id, name) {
+  try {
+    await YFSC.del('/api/gates/' + id);
+    await reloadGates();
+    showToast('已删除闸机：' + (name || id));
+    if (typeof renderPCContent === 'function') renderPCContent('gate-list');
+  } catch (e) { showToast('删除失败：' + e.message); }
+}
+
+// ---- 活动写操作 (真实 API) ----
+async function reloadActivities() {
+  try { const r = await YFSC.get('/api/activities'); ACTIVITIES = r.list; } catch (e) {}
+}
+async function auditActivity(id, approve) {
+  try {
+    const d = await YFSC.post('/api/activities/' + id + '/audit', { approve: !!approve });
+    await reloadActivities();
+    showToast('活动审核：' + d.status);
+    if (typeof renderPCContent === 'function') renderPCContent('activity-list');
+  } catch (e) { showToast('审核失败：' + e.message); }
+}
+async function endActivity(id) {
+  try {
+    await YFSC.post('/api/activities/' + id + '/end', {});
+    await reloadActivities();
+    showToast('活动已结束');
+    if (typeof renderPCContent === 'function') renderPCContent('activity-list');
+  } catch (e) { showToast('操作失败：' + e.message); }
 }
 
 // 提现: 中文状态 -> 原型英文状态, 并按待审核/历史拆分

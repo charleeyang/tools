@@ -62,6 +62,9 @@ func registerAPI(mux *http.ServeMux) {
 	// 统计
 	mux.HandleFunc("GET /api/statistics/overview", auth(handleOverview))
 
+	// 财务汇总
+	mux.HandleFunc("GET /api/finance/summary", rd("finance", handleFinanceSummary))
+
 	// 园区
 	mux.HandleFunc("GET /api/parks", rd("parks", handleParkList))
 	mux.HandleFunc("POST /api/parks", wr("parks", handleParkCreate))
@@ -105,12 +108,17 @@ func registerAPI(mux *http.ServeMux) {
 
 	// 闸机
 	mux.HandleFunc("GET /api/gates", rd("gates", handleGateList))
+	mux.HandleFunc("POST /api/gates", wr("gates", handleGateCreate))
+	mux.HandleFunc("PUT /api/gates/{id}/toggle", wr("gates", handleGateToggle))
+	mux.HandleFunc("DELETE /api/gates/{id}", wr("gates", handleGateDelete))
 	mux.HandleFunc("GET /api/faces", rd("gates", handleFaceList))
 	mux.HandleFunc("GET /api/entry-records", rd("gates", handleEntryRecordList))
 
 	// 活动
 	mux.HandleFunc("GET /api/activities", rd("activities", handleActivityList))
 	mux.HandleFunc("POST /api/activities", wr("activities", handleActivityCreate))
+	mux.HandleFunc("POST /api/activities/{id}/audit", wr("activities", handleActivityAudit))
+	mux.HandleFunc("POST /api/activities/{id}/end", wr("activities", handleActivityEnd))
 
 	// 第三方平台 (美团/抖音)
 	mux.HandleFunc("GET /api/platform/verify-records", auth(handlePlatformRecords))

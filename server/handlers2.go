@@ -109,6 +109,97 @@ func handleGateList(w http.ResponseWriter, r *http.Request) {
 	ok(w, map[string]interface{}{"list": list, "total": len(list)})
 }
 
+func handleGateCreate(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ParkId     int64  `json:"parkId"`
+		Name       string `json:"name"`
+		Type       string `json:"type"`
+		Direction  string `json:"direction"`
+		DeviceSn   string `json:"deviceSn"`
+	}
+	if err := decodeBody(r, &req); err != nil || req.Name == "" || req.DeviceSn == "" {
+		fail(w, 400, 400, "闸机名称与设备SN必填")
+		return
+	}
+	sc := scopeOf(getClaims(r))
+	if !sc.IsPlatform && sc.ParkId > 0 {
+		req.ParkId = sc.ParkId // 园区视角强制归属本园区
+	}
+	if req.Type == "" {
+		req.Type = "扫码闸机"
+	}
+	res, err := db.Exec(`INSERT INTO gate(park_id,name,type,direction,device_sn,enabled,online_status,today_pass)
+		VALUES(?,?,?,?,?,1,0,0)`, nullID(req.ParkId), req.Name, req.Type, req.Direction, req.DeviceSn)
+	if err != nil {
+		fail(w, 400, 400, "创建失败(SN可能重复): "+err.Error())
+		return
+	}
+	id, _ := res.LastInsertId()
+	writeLog(getClaims(r), "闸机管理", "新增闸机", req.Name)
+	okMsg(w, map[string]interface{}{"id": id}, "闸机已添加")
+}
+
+func handleGateToggle(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var cur int
+	if err := db.QueryRow("SELECT enabled FROM gate WHERE id=?", id).Scan(&cur); err != nil {
+		fail(w, 404, 404, "闸机不存在")
+		return
+	}
+	nv := 1 - cur
+	_, _ = db.Exec("UPDATE gate SET enabled=? WHERE id=?", nv, id)
+	writeLog(getClaims(r), "闸机管理", "启停闸机", map[int]string{0: "禁用", 1: "启用"}[nv])
+	okMsg(w, map[string]interface{}{"enabled": nv}, "状态已更新")
+}
+
+func handleGateDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	if _, err := db.Exec("DELETE FROM gate WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "闸机管理", "删除闸机", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
+}
+
+func handleActivityAudit(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var req struct{ Approve bool `json:"approve"` }
+	_ = decodeBody(r, &req)
+	var status string
+	if err := db.QueryRow("SELECT status FROM activity WHERE id=?", id).Scan(&status); err != nil {
+		fail(w, 404, 404, "活动不存在")
+		return
+	}
+	if status != "待审核" {
+		fail(w, 400, 400, "仅【待审核】活动可审核，当前："+status)
+		return
+	}
+	ns := "已驳回"
+	if req.Approve {
+		ns = "进行中"
+	}
+	_, _ = db.Exec("UPDATE activity SET status=? WHERE id=?", ns, id)
+	writeLog(getClaims(r), "活动管理", "审核活动", r.PathValue("id")+" -> "+ns)
+	okMsg(w, map[string]interface{}{"status": ns}, "审核完成："+ns)
+}
+
+func handleActivityEnd(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var status string
+	if err := db.QueryRow("SELECT status FROM activity WHERE id=?", id).Scan(&status); err != nil {
+		fail(w, 404, 404, "活动不存在")
+		return
+	}
+	if status != "进行中" {
+		fail(w, 400, 400, "仅【进行中】活动可结束，当前："+status)
+		return
+	}
+	_, _ = db.Exec("UPDATE activity SET status='已结束' WHERE id=?", id)
+	writeLog(getClaims(r), "活动管理", "结束活动", r.PathValue("id"))
+	okMsg(w, map[string]interface{}{"status": "已结束"}, "活动已结束")
+}
+
 func handleFaceList(w http.ResponseWriter, r *http.Request) {
 	list, _ := queryMaps(`SELECT f.id, f.user_id, u.phone, f.feature_id, f.authorized_gates, f.status, f.created_at
 		FROM face f JOIN user u ON u.id=f.user_id ORDER BY f.id`)

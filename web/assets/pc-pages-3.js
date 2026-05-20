@@ -74,6 +74,28 @@ function renderPositionList() {
 
 // ============ 闸机管理 ============
 function renderGateList() {
+  const rows = (GATES || []).map((g, i) => {
+    const enabled = g.enabled == 1 || g.enabled === true;
+    const online = g.onlineStatus == 1 || g.onlineStatus === true;
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td><b>${g.name}</b></td>
+        <td><span class="tag ${g.direction === '出' ? 'error' : 'processing'}">${g.type || '-'}</span></td>
+        <td>${g.direction || '-'}</td>
+        <td class="col-mono">${g.deviceSn || '-'}</td>
+        <td><span class="tag ${enabled ? 'success' : 'default'}">${enabled ? '启用' : '禁用'}</span></td>
+        <td><span class="tag ${online ? 'success' : 'default'}">${online ? '在线' : '离线'}</span></td>
+        <td>${g.todayPass || 0}</td>
+        <td class="col-actions">
+          <button class="btn-link" ${online ? '' : 'disabled'} onclick="showToast('远程开门已执行 · ${g.name}')">远程开门</button>
+          <span class="divider">|</span>
+          <button class="btn-link" onclick="toggleGate(${g.id})">${enabled ? '禁用' : '启用'}</button>
+          <span class="divider">|</span>
+          <button class="btn-link danger" onclick="deleteGate(${g.id},'${g.name}')">删除</button>
+        </td>
+      </tr>`;
+  }).join('');
   return `
     <div class="page-header"><div class="page-title">闸机列表</div></div>
     <div class="filter-bar">
@@ -82,19 +104,37 @@ function renderGateList() {
       <select class="select"><option>全部方向</option><option>进</option><option>出</option></select>
       <button class="btn btn-primary btn-sm">查询</button>
       <div class="spacer"></div>
-      <button class="btn btn-primary">+ 添加闸机</button>
+      <button class="btn btn-primary" onclick="openGateCreate()">+ 添加闸机</button>
     </div>
     <div class="card">
       <table class="ant-table">
         <thead><tr><th>序号</th><th>闸机名称</th><th>类型</th><th>方向</th><th>设备SN</th><th>启用状态</th><th>在线状态</th><th>今日通行</th><th class="col-actions">操作</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><b>主入口 1#</b></td><td><span class="tag processing">入口</span></td><td>进</td><td class="col-mono">E014370C2321</td><td><span class="tag success">启用</span></td><td><span class="tag success">在线</span></td><td>78</td><td class="col-actions"><button class="btn-link" onclick="showToast('远程开门已执行')">远程开门</button> <span class="divider">|</span> <button class="btn-link">编辑</button> <span class="divider">|</span> <button class="btn-link danger">删除</button></td></tr>
-          <tr><td>2</td><td><b>主入口 2#</b></td><td><span class="tag error">出口</span></td><td>出</td><td class="col-mono">E014370C2322</td><td><span class="tag success">启用</span></td><td><span class="tag success">在线</span></td><td>50</td><td class="col-actions"><button class="btn-link">远程开门</button> <span class="divider">|</span> <button class="btn-link">编辑</button> <span class="divider">|</span> <button class="btn-link danger">删除</button></td></tr>
-          <tr><td>3</td><td><b>侧门 3#</b></td><td><span class="tag processing">入口</span></td><td>进</td><td class="col-mono">E014370C2323</td><td><span class="tag default">禁用</span></td><td><span class="tag default">离线</span></td><td>0</td><td class="col-actions"><button class="btn-link" disabled>远程开门</button> <span class="divider">|</span> <button class="btn-link">编辑</button> <span class="divider">|</span> <button class="btn-link danger">删除</button></td></tr>
+          ${rows || '<tr><td colspan="9" style="text-align:center;color:var(--ant-text-3)">暂无闸机</td></tr>'}
         </tbody>
       </table>
     </div>
   `;
+}
+
+// 添加闸机表单 (实际写库由 bootstrap.js 的 submitGateCreate 完成)
+function openGateCreate() {
+  showModal({
+    title: '添加闸机',
+    body: `
+      <div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+        <div class="form-item"><label class="form-label">闸机名称 *</label><input id="gateName" class="input" placeholder="如 主入口 4#"></div>
+        <div class="form-row">
+          <div class="form-item"><label class="form-label">类型</label>
+            <select id="gateType" class="select" style="width:100%"><option>人脸闸机</option><option>扫码闸机</option></select></div>
+          <div class="form-item"><label class="form-label">方向</label>
+            <select id="gateDir" class="select" style="width:100%"><option>进</option><option>出</option></select></div>
+        </div>
+        <div class="form-item"><label class="form-label">设备 SN *</label><input id="gateSn" class="input" placeholder="设备序列号"></div>
+      </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="submitGateCreate()">确定添加</button>`,
+  });
 }
 
 function renderFaceList() {
@@ -186,8 +226,8 @@ function renderActivityList() {
                 <button class="btn-link">效果</button>
                 <span class="divider">|</span>
                 <button class="btn-link">编辑</button>
-                ${a.status==='待审核' && APP.view!=='platform' ? '<span class="divider">|</span><button class="btn-link">审核</button>' : ''}
-                ${a.status==='进行中' ? '<span class="divider">|</span><button class="btn-link danger">结束</button>' : ''}
+                ${a.status==='待审核' ? `<span class="divider">|</span><button class="btn-link" onclick="auditActivity(${a.id},true)">通过</button><span class="divider">|</span><button class="btn-link danger" onclick="auditActivity(${a.id},false)">驳回</button>` : ''}
+                ${a.status==='进行中' ? `<span class="divider">|</span><button class="btn-link danger" onclick="endActivity(${a.id})">结束</button>` : ''}
               </td>
             </tr>
           `).join('')}

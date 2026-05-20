@@ -329,7 +329,7 @@ var DOUYIN_STORE_CONFIGS = [
 ];
 
 // 园区财务 · 团购收入数据
-const PARK_FINANCE = {
+var PARK_FINANCE = {
   platform: {
     totalRevenue: 1099.80 + 320.00,
     onlineRevenue: 1099.80,
@@ -408,6 +408,13 @@ function shopData(data, field) {
   const f = field || 'shop';
   return data.filter(item => item[f] === shop);
 }
+
+// 闸机列表 (实时数据由 bootstrap 从 /api/gates 注入；默认演示数据)
+var GATES = [
+  { id: 1, name: '主入口 1#', type: '人脸闸机', direction: '进', deviceSn: 'E014370C2321', enabled: 1, onlineStatus: 1, todayPass: 78, park: '黄梅袁夫稻田' },
+  { id: 2, name: '主入口 2#', type: '人脸闸机', direction: '出', deviceSn: 'E014370C2322', enabled: 1, onlineStatus: 1, todayPass: 50, park: '黄梅袁夫稻田' },
+  { id: 3, name: '侧门 3#', type: '扫码闸机', direction: '进', deviceSn: 'E014370C2323', enabled: 0, onlineStatus: 0, todayPass: 0, park: '黄梅袁夫稻田' },
+];
 
 // 当前应用状态
 const APP = {

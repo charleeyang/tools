@@ -90,6 +90,30 @@ chk "新增客户" "0" "$C"
 C=$(curl -s -X POST "$BASE/api/activities" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"title":"测试活动","type":"满减活动"}' | jqv "['code']")
 chk "新增活动" "0" "$C"
 
+echo "==== 8. 财务汇总 ===="
+chk "财务汇总(平台,只读可见)" "0" "$(code "$ADMIN" "/api/finance/summary")"
+chk "财务汇总(园区)" "0" "$(code "$PARK" "/api/finance/summary")"
+HASPLAT=$(curl -s "$BASE/api/finance/summary" -H "Authorization: Bearer $ADMIN" | jqv "['data']['platform']['totalRevenue']" 2>/dev/null)
+[ -n "$HASPLAT" ] && chk "汇总含平台总收益字段" "yes" "yes" || chk "汇总含平台总收益字段" "yes" "no"
+
+echo "==== 9. 闸机写操作 (园区视角可操作) ===="
+# 平台超管 gates 只读 -> 创建应 403
+chk "平台超管(只读)创建闸机被拒" "403" "$(curl -s -X POST "$BASE/api/gates" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"name":"x","deviceSn":"SN-X-1"}' | jqv "['code']")"
+GID=$(curl -s -X POST "$BASE/api/gates" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"name":"测试闸机","deviceSn":"SN-TEST-'"$RANDOM"'","type":"扫码闸机","direction":"进"}' | jqv "['data']['id']")
+[ -n "$GID" ] && chk "园区管理员新增闸机" "yes" "yes" || chk "园区管理员新增闸机" "yes" "no"
+chk "切换闸机启停" "0" "$(curl -s -X PUT "$BASE/api/gates/$GID/toggle" -H "Authorization: Bearer $PARK" | jqv "['code']")"
+chk "删除闸机" "0" "$(curl -s -X DELETE "$BASE/api/gates/$GID" -H "Authorization: Bearer $PARK" | jqv "['code']")"
+
+echo "==== 10. 活动审核 / 结束 ===="
+# 找一个待审核活动 (种子: 火车餐厅6月限定)
+AID=$(curl -s "$BASE/api/activities?status=待审核" -H "Authorization: Bearer $ADMIN" | python3 -c "import sys,json;l=json.load(sys.stdin)['data']['list'];print(l[0]['id'] if l else '')")
+chk "存在待审核活动" "yes" "$([ -n "$AID" ] && echo yes || echo no)"
+chk "审核通过活动" "0" "$(curl -s -X POST "$BASE/api/activities/$AID/audit" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"approve":true}' | jqv "['code']")"
+chk "重复审核被拒" "400" "$(curl -s -X POST "$BASE/api/activities/$AID/audit" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"approve":true}' | jqv "['code']")"
+# 结束一个进行中活动
+EID=$(curl -s "$BASE/api/activities?status=进行中" -H "Authorization: Bearer $ADMIN" | python3 -c "import sys,json;l=json.load(sys.stdin)['data']['list'];print(l[0]['id'] if l else '')")
+chk "结束进行中活动" "0" "$(curl -s -X POST "$BASE/api/activities/$EID/end" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+
 echo ""
 echo "================================"
 printf "通过: \033[32m%d\033[0m  失败: \033[31m%d\033[0m\n" "$PASS" "$FAIL"

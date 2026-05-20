@@ -114,6 +114,30 @@ chk "重复审核被拒" "400" "$(curl -s -X POST "$BASE/api/activities/$AID/aud
 EID=$(curl -s "$BASE/api/activities?status=进行中" -H "Authorization: Bearer $ADMIN" | python3 -c "import sys,json;l=json.load(sys.stdin)['data']['list'];print(l[0]['id'] if l else '')")
 chk "结束进行中活动" "0" "$(curl -s -X POST "$BASE/api/activities/$EID/end" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
 
+echo "==== 11. 编辑/删除 CRUD ===="
+# 园区: 平台超管可操作
+NPID=$(curl -s -X POST "$BASE/api/parks" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"name":"待删园区","code":"PK_DEL_'"$RANDOM"'"}' | jqv "['data']['id']")
+chk "更新园区" "0" "$(curl -s -X PUT "$BASE/api/parks/$NPID" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"name":"已改名园区","status":"筹备中"}' | jqv "['code']")"
+chk "删除空园区" "0" "$(curl -s -X DELETE "$BASE/api/parks/$NPID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+# 店铺: 园区可操作
+NSID=$(curl -s -X POST "$BASE/api/shops" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"name":"待删店铺","parkId":1,"typeId":1}' | jqv "['data']['id']")
+chk "更新店铺" "0" "$(curl -s -X PUT "$BASE/api/shops/$NSID" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"name":"改名店铺","status":"休息中"}' | jqv "['code']")"
+chk "删除无订单店铺" "0" "$(curl -s -X DELETE "$BASE/api/shops/$NSID" -H "Authorization: Bearer $PARK" | jqv "['code']")"
+chk "删除有订单店铺被拒" "400" "$(curl -s -X DELETE "$BASE/api/shops/1" -H "Authorization: Bearer $PARK" | jqv "['code']")"
+# 客户: 园区可操作
+NUID=$(curl -s -X POST "$BASE/api/users" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"nickname":"待删客户","phone":"13100000000"}' | jqv "['data']['id']")
+chk "更新客户" "0" "$(curl -s -X PUT "$BASE/api/users/$NUID" -H "Authorization: Bearer $PARK" -H 'Content-Type: application/json' -d '{"memberLevel":"VIP1"}' | jqv "['code']")"
+chk "删除客户" "0" "$(curl -s -X DELETE "$BASE/api/users/$NUID" -H "Authorization: Bearer $PARK" | jqv "['code']")"
+# 员工: 平台可操作
+NEID=$(curl -s -X POST "$BASE/api/employees" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"name":"待删员工","username":"del_'"$RANDOM"'","roleCode":"SHOP_CASHIER"}' | jqv "['data']['id']")
+chk "更新员工" "0" "$(curl -s -X PUT "$BASE/api/employees/$NEID" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"status":"禁用"}' | jqv "['code']")"
+chk "删除员工" "0" "$(curl -s -X DELETE "$BASE/api/employees/$NEID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+chk "保护最后一个超管(不可删)" "400" "$(EID=$(curl -s "$BASE/api/employees" -H "Authorization: Bearer $ADMIN" | python3 -c "import sys,json;print([e['id'] for e in json.load(sys.stdin)['data']['list'] if e['roleCode']=='ADMIN_PLATFORM'][0])"); curl -s -X DELETE "$BASE/api/employees/$EID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+# 活动: 更新 + 删除
+NAID=$(curl -s -X POST "$BASE/api/activities" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"title":"待删活动","type":"满减活动"}' | jqv "['data']['id']")
+chk "更新活动" "0" "$(curl -s -X PUT "$BASE/api/activities/$NAID" -H "Authorization: Bearer $ADMIN" -H 'Content-Type: application/json' -d '{"title":"改名活动"}' | jqv "['code']")"
+chk "删除活动" "0" "$(curl -s -X DELETE "$BASE/api/activities/$NAID" -H "Authorization: Bearer $ADMIN" | jqv "['code']")"
+
 echo ""
 echo "================================"
 printf "通过: \033[32m%d\033[0m  失败: \033[31m%d\033[0m\n" "$PASS" "$FAIL"

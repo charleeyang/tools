@@ -38,11 +38,11 @@ function renderUserList() {
               <td><span class="tag ${u.faceState==='已录入'?'success':'default'}">${u.faceState}</span></td>
               <td>${u.regAt}</td>
               <td class="col-actions">
-                <button class="btn-link">详情</button>
+                <button class="btn-link" onclick="openUserEdit(${u.id})">编辑</button>
                 <span class="divider">|</span>
                 <button class="btn-link">充值记录</button>
                 <span class="divider">|</span>
-                <button class="btn-link danger">禁用</button>
+                <button class="btn-link danger" onclick="deleteUser(${u.id},'${u.nick}')">删除</button>
               </td>
             </tr>
           `).join('')}

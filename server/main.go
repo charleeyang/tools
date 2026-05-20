@@ -75,6 +75,7 @@ func registerAPI(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/shops", rd("shops", handleShopList))
 	mux.HandleFunc("POST /api/shops", wr("shops", handleShopCreate))
 	mux.HandleFunc("PUT /api/shops/{id}", wr("shops", handleShopUpdate))
+	mux.HandleFunc("DELETE /api/shops/{id}", wr("shops", handleShopDelete))
 	mux.HandleFunc("GET /api/shop-types", rd("shops", handleShopTypeList))
 	mux.HandleFunc("POST /api/shop-types", wr("shops", handleShopTypeCreate))
 
@@ -82,6 +83,8 @@ func registerAPI(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/users", rd("users", handleUserList))
 	mux.HandleFunc("GET /api/users/stats", rd("users", handleUserStats))
 	mux.HandleFunc("POST /api/users", wr("users", handleUserCreate))
+	mux.HandleFunc("PUT /api/users/{id}", wr("users", handleUserUpdate))
+	mux.HandleFunc("DELETE /api/users/{id}", wr("users", handleUserDelete))
 	mux.HandleFunc("GET /api/recharges", rd("users", handleRechargeList))
 
 	// 消费
@@ -104,6 +107,8 @@ func registerAPI(mux *http.ServeMux) {
 	// 员工 / 岗位
 	mux.HandleFunc("GET /api/employees", rd("employees", handleEmployeeList))
 	mux.HandleFunc("POST /api/employees", wr("employees", handleEmployeeCreate))
+	mux.HandleFunc("PUT /api/employees/{id}", wr("employees", handleEmployeeUpdate))
+	mux.HandleFunc("DELETE /api/employees/{id}", wr("employees", handleEmployeeDelete))
 	mux.HandleFunc("GET /api/positions", rd("employees", handlePositionList))
 
 	// 闸机
@@ -117,6 +122,8 @@ func registerAPI(mux *http.ServeMux) {
 	// 活动
 	mux.HandleFunc("GET /api/activities", rd("activities", handleActivityList))
 	mux.HandleFunc("POST /api/activities", wr("activities", handleActivityCreate))
+	mux.HandleFunc("PUT /api/activities/{id}", wr("activities", handleActivityUpdate))
+	mux.HandleFunc("DELETE /api/activities/{id}", wr("activities", handleActivityDelete))
 	mux.HandleFunc("POST /api/activities/{id}/audit", wr("activities", handleActivityAudit))
 	mux.HandleFunc("POST /api/activities/{id}/end", wr("activities", handleActivityEnd))
 

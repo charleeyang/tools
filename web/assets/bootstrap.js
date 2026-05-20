@@ -100,8 +100,8 @@ function mapRecharges(list) {
     pay: r.payMethod, status: r.status, txn: r.txnNo || '', remark: r.remark || '', at: r.at }));
 }
 function mapEmployees(list) {
-  return list.map(e => ({ name: e.name, username: e.username, phone: e.phone, park: e.park, shop: e.shop,
-    role: e.role, position: e.position, online: !!e.online, createdAt: e.createdAt }));
+  return list.map(e => ({ id: e.id, name: e.name, username: e.username, phone: e.phone, park: e.park, shop: e.shop,
+    role: e.role, roleCode: e.roleCode, position: e.position, online: !!e.online, status: e.status, createdAt: e.createdAt }));
 }
 
 // 通用: 直接可用 (字段已对齐)
@@ -351,6 +351,168 @@ async function submitActivityCreate() {
     showToast('✅ 活动已创建并发起审核');
     if (typeof goPage === 'function') goPage('activity-list');
   } catch (e) { showToast('创建失败：' + e.message); }
+}
+
+// ---- 编辑 / 删除 (园区/店铺/客户/员工/活动) ----
+async function reloadParks() { try { PARKS = mapParks((await YFSC.get('/api/parks')).list); } catch (e) {} }
+async function reloadShops() { try { SHOPS = mapShops((await YFSC.get('/api/shops?size=100')).list); } catch (e) {} }
+async function reloadUsers() { try { USERS = mapUsers((await YFSC.get('/api/users?size=100')).list); } catch (e) {} }
+async function reloadEmployees() { try { EMPLOYEES = mapEmployees((await YFSC.get('/api/employees')).list); } catch (e) {} }
+function rerender(page) { if (typeof renderPCContent === 'function') renderPCContent(page); }
+let _pendingDel = null;
+function runPendingDel() { closeModal(); if (_pendingDel) { const f = _pendingDel; _pendingDel = null; f(); } }
+function confirmDel(msg, fn) {
+  _pendingDel = fn;
+  showModal({ title: '确认删除', body: `<div style="padding:10px 0;font-size:14px">${msg}</div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" style="background:#ff4d4f;border-color:#ff4d4f" onclick="runPendingDel()">确认删除</button>` });
+}
+
+// 园区
+function openParkEdit(id) {
+  const p = (PARKS || []).find(x => x.id === id); if (!p) return;
+  showModal({ title: '编辑园区 · ' + p.name,
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">园区名称</label><input id="epName" class="input" value="${p.name}"></div>
+      <div class="form-item"><label class="form-label">地址</label><input id="epAddr" class="input" value="${p.addr || ''}"></div>
+      <div class="form-item"><label class="form-label">状态</label><select id="epStatus" class="select" style="width:100%">
+        <option ${p.status === '营业中' ? 'selected' : ''}>营业中</option><option ${p.status === '筹备中' ? 'selected' : ''}>筹备中</option><option ${p.status === '已关闭' ? 'selected' : ''}>已关闭</option></select></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitParkEdit(${id})">保存</button>` });
+}
+async function submitParkEdit(id) {
+  try {
+    await YFSC.put('/api/parks/' + id, { name: fval('epName'), address: fval('epAddr'), status: fval('epStatus') });
+    await reloadParks(); closeModal(); showToast('✅ 园区已更新'); rerender('park-list');
+  } catch (e) { showToast('更新失败：' + e.message); }
+}
+function deletePark(id, name) {
+  confirmDel(`确认删除园区「${name}」？`, async () => {
+    try { await YFSC.del('/api/parks/' + id); await reloadParks(); showToast('已删除园区：' + name); rerender('park-list'); }
+    catch (e) { showToast('删除失败：' + e.message); }
+  });
+}
+
+// 店铺
+async function submitShopEdit(id) {
+  const name = fval('editShopName'), addr = fval('editShopAddr'), typeName = fval('editShopType');
+  let typeId = 0;
+  try { const t = (await YFSC.get('/api/shop-types')).list.find(x => x.name === typeName); if (t) typeId = t.id; } catch (e) {}
+  try {
+    await YFSC.put('/api/shops/' + id, { name, address: addr, typeId });
+    await reloadShops(); closeModal(); showToast('✅ 店铺「' + name + '」已保存'); rerender('shop-list');
+  } catch (e) { showToast('保存失败：' + e.message); }
+}
+async function toggleShopStatus(id) {
+  const s = (SHOPS || []).find(x => x.id === id); if (!s) return;
+  const ns = s.status === '营业中' ? '休息中' : '营业中';
+  try {
+    await YFSC.put('/api/shops/' + id, { status: ns });
+    await reloadShops(); showToast(ns === '营业中' ? '已上架' : '已下架'); rerender('shop-list');
+  } catch (e) { showToast('操作失败：' + e.message); }
+}
+
+// 客户
+function openUserEdit(id) {
+  const u = (USERS || []).find(x => x.id === id); if (!u) return;
+  showModal({ title: '编辑客户 · ' + (u.nick || u.phone),
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">昵称</label><input id="euNick" class="input" value="${u.nick || ''}"></div>
+      <div class="form-item"><label class="form-label">手机号</label><input id="euPhone" class="input" value="${u.phone || ''}"></div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">会员等级</label><select id="euLevel" class="select" style="width:100%">
+          ${['普通用户', 'VIP1', 'VIP2', 'VIP3'].map(l => `<option ${u.level === l ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="form-item"><label class="form-label">人脸状态</label><select id="euFace" class="select" style="width:100%">
+          <option ${u.faceState === '已录入' ? 'selected' : ''}>已录入</option><option ${u.faceState === '未录入' ? 'selected' : ''}>未录入</option></select></div>
+      </div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitUserEdit(${id})">保存</button>` });
+}
+async function submitUserEdit(id) {
+  try {
+    await YFSC.put('/api/users/' + id, { nickname: fval('euNick'), phone: fval('euPhone'), memberLevel: fval('euLevel'), faceStatus: fval('euFace') });
+    await reloadUsers(); closeModal(); showToast('✅ 客户已更新'); rerender('user-list');
+  } catch (e) { showToast('更新失败：' + e.message); }
+}
+function deleteUser(id, name) {
+  confirmDel(`确认删除客户「${name}」？`, async () => {
+    try { await YFSC.del('/api/users/' + id); await reloadUsers(); showToast('已删除客户：' + name); rerender('user-list'); }
+    catch (e) { showToast('删除失败：' + e.message); }
+  });
+}
+
+// 员工
+async function openEmployeeEdit(id) {
+  const e0 = (EMPLOYEES || []).find(x => x.id === id); if (!e0) return;
+  let positions = [], shops = [];
+  try { positions = (await YFSC.get('/api/positions')).list; } catch (e) {}
+  try { shops = (await YFSC.get('/api/shops?size=100')).list; } catch (e) {}
+  const roleOpts = [['ADMIN_PLATFORM', '平台超级管理员'], ['PLATFORM_OPER', '总部运营'], ['PARK_ADMIN', '园区管理员'], ['PARK_MANAGER', '园区经理'], ['SHOP_ADMIN', '商户管理员'], ['SHOP_CASHIER', '商户收银员']]
+    .map(([c, n]) => `<option value="${c}" ${e0.roleCode === c ? 'selected' : ''}>${n}</option>`).join('');
+  const parkOpts = '<option value="">（不限/总部）</option>' + (PARKS || []).map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  const shopOpts = '<option value="">（不限）</option>' + shops.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  const posOpts = '<option value="">（不限）</option>' + positions.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  showModal({ title: '编辑员工 · ' + e0.name,
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">姓名</label><input id="eeName" class="input" value="${e0.name}"></div>
+        <div class="form-item"><label class="form-label">手机号</label><input id="eePhone" class="input" value="${e0.phone || ''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">角色</label><select id="eeRole" class="select" style="width:100%">${roleOpts}</select></div>
+        <div class="form-item"><label class="form-label">状态</label><select id="eeStatus" class="select" style="width:100%">
+          <option ${e0.status === '启用' ? 'selected' : ''}>启用</option><option ${e0.status === '禁用' ? 'selected' : ''}>禁用</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">所属园区</label><select id="eePark" class="select" style="width:100%">${parkOpts}</select></div>
+        <div class="form-item"><label class="form-label">所属店铺</label><select id="eeShop" class="select" style="width:100%">${shopOpts}</select></div>
+      </div>
+      <div class="form-item"><label class="form-label">岗位</label><select id="eePos" class="select" style="width:100%">${posOpts}</select></div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitEmployeeEdit(${id})">保存</button>` });
+}
+async function submitEmployeeEdit(id) {
+  try {
+    await YFSC.put('/api/employees/' + id, {
+      name: fval('eeName'), phone: fval('eePhone'), roleCode: fval('eeRole'), status: fval('eeStatus'),
+      parkId: Number(fval('eePark')) || 0, shopId: Number(fval('eeShop')) || 0, positionId: Number(fval('eePos')) || 0,
+    });
+    await reloadEmployees(); closeModal(); showToast('✅ 员工已更新'); rerender('employee-list');
+  } catch (e) { showToast('更新失败：' + e.message); }
+}
+function deleteEmployee(id, name) {
+  confirmDel(`确认删除员工「${name}」？`, async () => {
+    try { await YFSC.del('/api/employees/' + id); await reloadEmployees(); showToast('已删除员工：' + name); rerender('employee-list'); }
+    catch (e) { showToast('删除失败：' + e.message); }
+  });
+}
+
+// 活动
+function openActivityEdit(id) {
+  const a = (ACTIVITIES || []).find(x => x.id === id); if (!a) return;
+  showModal({ title: '编辑活动 · ' + a.title,
+    body: `<div style="display:flex;flex-direction:column;gap:14px;padding:6px 0">
+      <div class="form-item"><label class="form-label">活动标题</label><input id="eaTitle" class="input" value="${a.title}"></div>
+      <div class="form-item"><label class="form-label">活动类型</label><select id="eaType" class="select" style="width:100%">
+        ${['优惠券活动', '满减活动', '限时折扣', '节日活动', '会员专享'].map(t => `<option ${a.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="form-row">
+        <div class="form-item"><label class="form-label">开始时间</label><input id="eaStart" class="input" value="${a.startAt || ''}"></div>
+        <div class="form-item"><label class="form-label">结束时间</label><input id="eaEnd" class="input" value="${a.endAt || ''}"></div>
+      </div>
+    </div>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitActivityEdit(${id})">保存</button>` });
+}
+async function submitActivityEdit(id) {
+  try {
+    await YFSC.put('/api/activities/' + id, { title: fval('eaTitle'), type: fval('eaType'), startAt: fval('eaStart'), endAt: fval('eaEnd') });
+    await reloadActivities(); closeModal(); showToast('✅ 活动已更新'); rerender('activity-list');
+  } catch (e) { showToast('更新失败：' + e.message); }
+}
+function deleteActivity(id, title) {
+  confirmDel(`确认删除活动「${title}」？`, async () => {
+    try { await YFSC.del('/api/activities/' + id); await reloadActivities(); showToast('已删除活动：' + title); rerender('activity-list'); }
+    catch (e) { showToast('删除失败：' + e.message); }
+  });
 }
 
 // 提现: 中文状态 -> 原型英文状态, 并按待审核/历史拆分

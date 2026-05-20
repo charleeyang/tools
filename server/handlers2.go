@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -61,7 +62,7 @@ func handleEmployeeList(w http.ResponseWriter, r *http.Request) {
 			args = append(args, sc.ParkId)
 		}
 	}
-	list, _ := queryMaps(`SELECT e.name, e.username, COALESCE(e.phone,'') phone,
+	list, _ := queryMaps(`SELECT e.id, e.name, e.username, COALESCE(e.phone,'') phone,
 		COALESCE(p.name,'-') park, COALESCE(s.name,'-') shop,
 		CASE e.role_code WHEN 'ADMIN_PLATFORM' THEN '平台超级管理员' WHEN 'PLATFORM_OPER' THEN '总部运营'
 			WHEN 'PARK_ADMIN' THEN '园区管理员' WHEN 'PARK_MANAGER' THEN '园区经理'
@@ -94,6 +95,46 @@ func handleEmployeeCreate(w http.ResponseWriter, r *http.Request) {
 	id, _ := res.LastInsertId()
 	writeLog(getClaims(r), "员工管理", "新增员工", req.Name+"("+req.Username+")")
 	okMsg(w, map[string]interface{}{"id": id}, "员工创建成功")
+}
+
+func handleEmployeeUpdate(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var req struct {
+		Name, Phone, RoleCode, Status     string
+		ParkId, ShopId, PositionId        int64
+	}
+	if err := decodeBody(r, &req); err != nil {
+		fail(w, 400, 400, "请求格式错误")
+		return
+	}
+	_, err := db.Exec(`UPDATE employee SET name=COALESCE(NULLIF(?,''),name),
+		phone=COALESCE(NULLIF(?,''),phone), role_code=COALESCE(NULLIF(?,''),role_code),
+		status=COALESCE(NULLIF(?,''),status), park_id=?, shop_id=?, position_id=?,
+		updated_at=datetime('now','localtime') WHERE id=?`,
+		req.Name, req.Phone, req.RoleCode, req.Status,
+		nullID(req.ParkId), nullID(req.ShopId), nullID(req.PositionId), id)
+	if err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "员工管理", "更新员工", fmt.Sprintf("emp#%d", id))
+	okMsg(w, nil, "更新成功")
+}
+
+func handleEmployeeDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var role string
+	_ = db.QueryRow("SELECT role_code FROM employee WHERE id=?", id).Scan(&role)
+	if role == "ADMIN_PLATFORM" && scalarInt("SELECT COUNT(*) FROM employee WHERE role_code='ADMIN_PLATFORM'") <= 1 {
+		fail(w, 400, 400, "不可删除最后一个平台超级管理员")
+		return
+	}
+	if _, err := db.Exec("DELETE FROM employee WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "员工管理", "删除员工", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
 }
 
 func handlePositionList(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +200,38 @@ func handleGateDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeLog(getClaims(r), "闸机管理", "删除闸机", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
+}
+
+func handleActivityUpdate(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var req struct {
+		Title, Type, ParkScope, ShopScope, StartAt, EndAt string
+	}
+	if err := decodeBody(r, &req); err != nil {
+		fail(w, 400, 400, "请求格式错误")
+		return
+	}
+	_, err := db.Exec(`UPDATE activity SET title=COALESCE(NULLIF(?,''),title),
+		type=COALESCE(NULLIF(?,''),type), park_scope=COALESCE(NULLIF(?,''),park_scope),
+		shop_scope=COALESCE(NULLIF(?,''),shop_scope), start_at=COALESCE(NULLIF(?,''),start_at),
+		end_at=COALESCE(NULLIF(?,''),end_at) WHERE id=?`,
+		req.Title, req.Type, req.ParkScope, req.ShopScope, req.StartAt, req.EndAt, id)
+	if err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "活动管理", "更新活动", r.PathValue("id"))
+	okMsg(w, nil, "更新成功")
+}
+
+func handleActivityDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	if _, err := db.Exec("DELETE FROM activity WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "活动管理", "删除活动", r.PathValue("id"))
 	okMsg(w, nil, "已删除")
 }
 

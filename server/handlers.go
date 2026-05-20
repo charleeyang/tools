@@ -311,6 +311,58 @@ func handleShopUpdate(w http.ResponseWriter, r *http.Request) {
 	okMsg(w, nil, "更新成功")
 }
 
+func handleShopDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	if scalarInt(`SELECT COUNT(*) FROM "order" WHERE shop_id=?`, id) > 0 {
+		fail(w, 400, 400, "该店铺存在订单，无法删除（可改为已关闭）")
+		return
+	}
+	_, _ = db.Exec("DELETE FROM product WHERE shop_id=?", id)
+	if _, err := db.Exec("DELETE FROM shop WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "店铺管理", "删除店铺", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
+}
+
+func handleUserUpdate(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	var req struct {
+		Nickname, Phone, MemberLevel, FaceStatus string
+	}
+	if err := decodeBody(r, &req); err != nil {
+		fail(w, 400, 400, "请求格式错误")
+		return
+	}
+	_, err := db.Exec(`UPDATE user SET nickname=COALESCE(NULLIF(?,''),nickname),
+		phone=COALESCE(NULLIF(?,''),phone), member_level=COALESCE(NULLIF(?,''),member_level),
+		face_status=COALESCE(NULLIF(?,''),face_status), updated_at=datetime('now','localtime') WHERE id=?`,
+		req.Nickname, req.Phone, req.MemberLevel, req.FaceStatus, id)
+	if err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "客户管理", "更新客户", fmt.Sprintf("user#%d", id))
+	okMsg(w, nil, "更新成功")
+}
+
+func handleUserDelete(w http.ResponseWriter, r *http.Request) {
+	id := pathInt(r, "id")
+	if scalarInt(`SELECT COUNT(*) FROM "order" WHERE user_id=?`, id) > 0 {
+		fail(w, 400, 400, "该客户存在订单，无法删除")
+		return
+	}
+	_, _ = db.Exec("DELETE FROM recharge WHERE user_id=?", id)
+	_, _ = db.Exec("DELETE FROM face WHERE user_id=?", id)
+	if _, err := db.Exec("DELETE FROM user WHERE id=?", id); err != nil {
+		fail(w, 400, 400, err.Error())
+		return
+	}
+	writeLog(getClaims(r), "客户管理", "删除客户", r.PathValue("id"))
+	okMsg(w, nil, "已删除")
+}
+
 func handleShopTypeList(w http.ResponseWriter, r *http.Request) {
 	list, _ := queryMaps(`SELECT id,name,code,COALESCE(description,'') description,status,created_at,
 		(SELECT COUNT(*) FROM shop WHERE type_id=shop_type.id) shop_count FROM shop_type ORDER BY id`)

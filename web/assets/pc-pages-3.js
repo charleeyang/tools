@@ -33,11 +33,9 @@ function renderEmployeeList() {
               <td>${e.online?'<span class="tag success">在线</span>':'<span class="tag default">离线</span>'}</td>
               <td>${e.createdAt}</td>
               <td class="col-actions">
-                <button class="btn-link">编辑</button>
+                <button class="btn-link" onclick="openEmployeeEdit(${e.id})">编辑</button>
                 <span class="divider">|</span>
-                <button class="btn-link">重置密码</button>
-                <span class="divider">|</span>
-                <button class="btn-link danger">禁用</button>
+                <button class="btn-link danger" onclick="deleteEmployee(${e.id},'${e.name}')">删除</button>
               </td>
             </tr>
           `).join('')}
@@ -223,9 +221,9 @@ function renderActivityList() {
               <td style="text-align:right">${a.joins}</td>
               <td style="text-align:right">${a.verifyRate}</td>
               <td class="col-actions">
-                <button class="btn-link">效果</button>
+                <button class="btn-link" onclick="openActivityEdit(${a.id})">编辑</button>
                 <span class="divider">|</span>
-                <button class="btn-link">编辑</button>
+                <button class="btn-link danger" onclick="deleteActivity(${a.id},'${a.title}')">删除</button>
                 ${a.status==='待审核' ? `<span class="divider">|</span><button class="btn-link" onclick="auditActivity(${a.id},true)">通过</button><span class="divider">|</span><button class="btn-link danger" onclick="auditActivity(${a.id},false)">驳回</button>` : ''}
                 ${a.status==='进行中' ? `<span class="divider">|</span><button class="btn-link danger" onclick="endActivity(${a.id})">结束</button>` : ''}
               </td>

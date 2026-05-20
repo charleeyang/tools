@@ -356,9 +356,9 @@ function renderParkList() {
               <td><span class="tag success">${p.status}</span></td>
               <td>${p.createdAt}</td>
               <td class="col-actions">
-                <button class="btn-link">编辑</button>
+                <button class="btn-link" onclick="openParkEdit(${p.id})">编辑</button>
                 <span class="divider">|</span>
-                <button class="btn-link">数据快照</button>
+                <button class="btn-link danger" onclick="deletePark(${p.id},'${p.name}')">删除</button>
                 <span class="divider">|</span>
                 <button class="btn-link" onclick="switchView('${p.id===1?'park-hm':'park-wh'}')">切换视角</button>
               </td>
@@ -482,7 +482,7 @@ function renderShopList() {
                 <span class="divider">|</span>
                 <button class="btn-link" onclick="openShopQr(${s.id})">二维码</button>
                 <span class="divider">|</span>
-                <button class="btn-link danger">${s.status==='营业中'?'下架':'上架'}</button>
+                <button class="btn-link danger" onclick="toggleShopStatus(${s.id})">${s.status==='营业中'?'下架':'上架'}</button>
               </td>
             </tr>
           `).join('')}
@@ -507,16 +507,16 @@ function openShopEdit(id) {
         <div class="form-row">
           <div class="form-item">
             <label class="form-label required">店铺名称</label>
-            <input class="input" value="${s.name}">
+            <input id="editShopName" class="input" value="${s.name}">
           </div>
           <div class="form-item">
             <label class="form-label required">店铺类型</label>
-            <select class="select"><option ${s.type==='餐饮'?'selected':''}>餐饮</option><option ${s.type==='零售'?'selected':''}>零售</option><option ${s.type==='体验'?'selected':''}>体验</option></select>
+            <select id="editShopType" class="select"><option ${s.type==='餐饮'?'selected':''}>餐饮</option><option ${s.type==='零售'?'selected':''}>零售</option><option ${s.type==='体验'?'selected':''}>体验</option><option ${s.type==='其他'?'selected':''}>其他</option></select>
           </div>
         </div>
         <div class="form-item">
           <label class="form-label required">地址</label>
-          <input class="input" value="${s.addr}">
+          <input id="editShopAddr" class="input" value="${s.addr}">
         </div>
         <div style="border-top:1px solid var(--ant-border-secondary);margin:16px 0;padding-top:16px">
           <div style="font-size:14px;font-weight:600;margin-bottom:12px">💳 收款信息</div>
@@ -560,7 +560,7 @@ function openShopEdit(id) {
         </div>
       </div>
     `,
-    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="closeModal();showToast('店铺「${s.name}」已保存')">保存</button>`,
+    footer: `<button class="btn" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="submitShopEdit(${s.id})">保存</button>`,
   });
 }
 

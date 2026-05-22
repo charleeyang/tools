@@ -1,5 +1,6 @@
 # 多阶段构建: 编译 Go 后端 (内嵌 SQLite, 纯 Go 无需 cgo)
-FROM golang:1.24 AS builder
+FROM golang:1.25 AS builder
+ENV GOPROXY=direct
 WORKDIR /src
 COPY server/go.mod server/go.sum ./server/
 RUN cd server && go mod download
